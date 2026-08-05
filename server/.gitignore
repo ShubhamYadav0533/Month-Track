@@ -1,0 +1,12 @@
+# Node & Express
+node_modules/
+dist/
+
+# Environment Secrets
+.env
+.env*
+*.env
+
+# Logs
+*.log
+npm-debug.log*
