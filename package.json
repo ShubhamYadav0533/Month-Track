@@ -47,7 +47,9 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "start": "expo start",
+    "build": "cd server && npm install && npm run build",
+    "start": "node server/dist/index.js",
+    "expo:start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
