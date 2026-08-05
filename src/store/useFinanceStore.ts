@@ -17,6 +17,8 @@ import {
   saveUserToSupabase,
   saveAccountsToSupabase,
   saveExpenseToSupabase,
+  deleteExpenseFromSupabase,
+  fetchFullUserDataFromSupabase,
   saveBudgetToSupabase,
   saveSavingsGoalToSupabase,
 } from '../services/supabaseService';
@@ -31,8 +33,10 @@ interface FinanceState {
   notifications: NotificationItem[];
   splitExpenses: SplitExpense[];
   isLocked: boolean;
+  isLoading: boolean;
 
   // Actions
+  loadSupabaseData: () => Promise<void>;
   setupUser: (
     profileData: Omit<UserProfile, 'id' | 'isSetupComplete'>,
     walletBal: number,
@@ -82,60 +86,46 @@ const DEFAULT_BUDGETS: CategoryBudget[] = [
   { category: 'Entertainment', monthlyLimit: 3000 },
 ];
 
-const DEFAULT_GOALS: SavingsGoal[] = [
-  { id: 'goal_1', title: 'New Laptop', targetAmount: 80000, savedAmount: 45000, icon: 'laptop' },
-  { id: 'goal_2', title: 'Sports Bike', targetAmount: 200000, savedAmount: 78000, icon: 'bike' },
-];
-
-const DEFAULT_RECURRING: RecurringTransaction[] = [
-  { id: 'rec_1', title: 'Netflix Subscription', amount: 499, category: 'Entertainment', frequency: 'monthly', nextDueDate: '2026-08-15', autoDeduct: true, accountId: 'acc_upi' },
-  { id: 'rec_2', title: 'Electricity Bill', amount: 2400, category: 'Bills', frequency: 'monthly', nextDueDate: '2026-08-20', autoDeduct: true, accountId: 'acc_bank' },
-  { id: 'rec_3', title: 'Broadband Internet', amount: 799, category: 'Recharge', frequency: 'monthly', nextDueDate: '2026-08-10', autoDeduct: true, accountId: 'acc_upi' },
-];
-
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
       profile: DEFAULT_PROFILE,
       accounts: DEFAULT_ACCOUNTS,
-      expenses: [
-        {
-          id: 'exp_1',
-          accountId: 'acc_upi',
-          amount: 150,
-          category: 'Food',
-          description: 'Lunch Bowl',
-          paymentMethod: 'UPI',
-          expenseDate: getFormattedDate(),
-          createdAt: new Date().toISOString(),
-        },
-      ],
+      expenses: [], // Pure real user data only - zero mock dummy entries
       budgets: DEFAULT_BUDGETS,
-      savingsGoals: DEFAULT_GOALS,
-      recurring: DEFAULT_RECURRING,
-      notifications: [
-        {
-          id: 'notif_1',
-          title: 'Good Morning ☀️',
-          message: "Today's daily safe budget is calculated & ready on your dashboard.",
-          type: 'info',
-          isRead: false,
-          createdAt: new Date().toISOString(),
-        },
-      ],
-      splitExpenses: [
-        {
-          id: 'split_1',
-          title: 'Dinner Party',
-          totalAmount: 1200,
-          myShare: 400,
-          friendName: 'Alex',
-          friendShare: 800,
-          isSettled: false,
-          createdAt: new Date().toISOString(),
-        },
-      ],
+      savingsGoals: [],
+      recurring: [],
+      notifications: [],
+      splitExpenses: [],
       isLocked: false,
+      isLoading: false,
+
+      loadSupabaseData: async () => {
+        const userId = get().profile.id;
+        if (!userId) return;
+
+        set({ isLoading: true });
+        const res = await fetchFullUserDataFromSupabase(userId);
+        if (res.success && res.expenses) {
+          set((state) => ({
+            expenses: res.expenses.length > 0 ? res.expenses : state.expenses,
+            accounts: res.accounts.length > 0
+              ? res.accounts.map((a: any) => ({
+                  id: a.id,
+                  name: a.name,
+                  type: a.type,
+                  balance: parseFloat(a.balance),
+                  creditLimit: parseFloat(a.credit_limit || 0),
+                  icon: a.type,
+                  color: a.type === 'wallet' ? '#10b981' : a.type === 'bank' ? '#3b82f6' : a.type === 'upi' ? '#8b5cf6' : '#f59e0b',
+                }))
+              : state.accounts,
+            isLoading: false,
+          }));
+        } else {
+          set({ isLoading: false });
+        }
+      },
 
       setupUser: (profileData, walletBal, bankBal, upiBal, cardLimit = 50000) => {
         const newProfile = {
@@ -154,6 +144,7 @@ export const useFinanceStore = create<FinanceState>()(
         set({
           profile: newProfile,
           accounts: newAccounts,
+          expenses: [], // Reset to clean slate for new setup
         });
 
         // Sync to Supabase DB asynchronously
@@ -208,6 +199,11 @@ export const useFinanceStore = create<FinanceState>()(
               return acc;
             });
           }
+
+          // Delete from Supabase DB
+          deleteExpenseFromSupabase(id);
+          saveAccountsToSupabase(state.profile.id, updatedAccounts);
+
           return {
             expenses: state.expenses.filter((e) => e.id !== id),
             accounts: updatedAccounts,
@@ -334,8 +330,8 @@ export const useFinanceStore = create<FinanceState>()(
           accounts: DEFAULT_ACCOUNTS,
           expenses: [],
           budgets: DEFAULT_BUDGETS,
-          savingsGoals: DEFAULT_GOALS,
-          recurring: DEFAULT_RECURRING,
+          savingsGoals: [],
+          recurring: [],
           splitExpenses: [],
           isLocked: false,
         });

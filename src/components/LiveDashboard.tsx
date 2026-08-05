@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { calculateDailyBudgetStats } from '../utils/budgetCalculator';
@@ -24,11 +25,27 @@ import {
   PiggyBank,
   CheckCircle2,
   Lock,
+  Trash2,
+  History,
 } from 'lucide-react-native';
 
 export function LiveDashboard() {
-  const { profile, accounts, expenses, lockApp, processRecurringDeductions } = useFinanceStore();
+  const {
+    profile,
+    accounts,
+    expenses,
+    lockApp,
+    processRecurringDeductions,
+    deleteExpense,
+    loadSupabaseData,
+    isLoading,
+  } = useFinanceStore();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    loadSupabaseData();
+  }, []);
 
   const stats = calculateDailyBudgetStats(profile, accounts, expenses);
 
@@ -49,8 +66,12 @@ export function LiveDashboard() {
             <Text style={styles.subtitleText}>Smart Personal Finance Assistant</Text>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconCircle} onPress={processRecurringDeductions}>
-              <RefreshCw size={18} color="#10b981" />
+            <TouchableOpacity style={styles.iconCircle} onPress={loadSupabaseData}>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#10b981" />
+              ) : (
+                <RefreshCw size={18} color="#10b981" />
+              )}
             </TouchableOpacity>
             {profile.pinCode && (
               <TouchableOpacity style={styles.iconCircle} onPress={lockApp}>
@@ -123,7 +144,7 @@ export function LiveDashboard() {
           </View>
         </View>
 
-        {/* Phase 1 Step 7: Carry Forward / Overspent Alert Widget */}
+        {/* Carry Forward Widget */}
         <View style={styles.carryCard}>
           <View style={styles.carryHeader}>
             <TrendingDown size={18} color={stats.carryForward >= 0 ? '#10b981' : '#ef4444'} />
@@ -138,21 +159,21 @@ export function LiveDashboard() {
           </Text>
         </View>
 
-        {/* Smart AI Velocity & Prediction Alert */}
+        {/* Depletion Speed Warning */}
         {stats.predictedDaysUntilDepletion < stats.remainingDays && (
           <View style={styles.alertCard}>
             <AlertTriangle size={20} color="#f59e0b" />
             <View style={styles.alertTextWrapper}>
-              <Text style={styles.alertTitle}>Smart Prediction Warning</Text>
+              <Text style={styles.alertTitle}>Smart Velocity Warning</Text>
               <Text style={styles.alertBody}>
-                Current velocity: {profile.currency}{stats.velocityPerDay}/day. You will run out of money in{' '}
+                Current speed: {profile.currency}{stats.velocityPerDay}/day. Money will run out in{' '}
                 <Text style={styles.alertHighlight}>{stats.predictedDaysUntilDepletion} days</Text> instead of {stats.remainingDays}!
               </Text>
             </View>
           </View>
         )}
 
-        {/* Phase 1 Step 8 Live Dashboard Overview */}
+        {/* Overview Grid */}
         <View style={styles.overviewGrid}>
           <View style={styles.overviewCard}>
             <Text style={styles.overviewLabel}>Current Balance</Text>
@@ -168,7 +189,7 @@ export function LiveDashboard() {
         </View>
 
         {/* Multi-Accounts Breakdown */}
-        <Text style={styles.sectionHeader}>Accounts & Wallets</Text>
+        <Text style={styles.sectionHeader}>Accounts & Balances (Live DB)</Text>
         <View style={styles.accountsGrid}>
           {accounts.map((acc) => (
             <View key={acc.id} style={styles.accountCard}>
@@ -186,36 +207,51 @@ export function LiveDashboard() {
           ))}
         </View>
 
-        {/* Recent Today's Expenses List */}
-        <Text style={styles.sectionHeader}>Today's Expenses</Text>
-        {expenses.filter(e => e.expenseDate === new Date().toISOString().split('T')[0]).length === 0 ? (
+        {/* Transaction History Header */}
+        <View style={styles.historyTitleRow}>
+          <View style={styles.historyLeft}>
+            <History size={18} color="#10b981" />
+            <Text style={styles.sectionHeaderNoMargin}>Expense History ({expenses.length})</Text>
+          </View>
+        </View>
+
+        {/* Expense History List */}
+        {expenses.length === 0 ? (
           <View style={styles.emptyState}>
             <CheckCircle2 size={32} color="#10b981" />
-            <Text style={styles.emptyText}>No expenses logged today. Safe & sound!</Text>
+            <Text style={styles.emptyText}>No expenses logged yet. Tap "+ Add Expense" below!</Text>
           </View>
         ) : (
-          expenses
-            .filter(e => e.expenseDate === new Date().toISOString().split('T')[0])
-            .map((exp) => (
-              <View key={exp.id} style={styles.expenseRow}>
-                <View style={styles.expenseLeft}>
-                  <View style={styles.categoryBadge}>
-                    <Text style={styles.categoryBadgeText}>{exp.category}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.expenseDesc}>{exp.description}</Text>
-                    <Text style={styles.expenseMeta}>{exp.paymentMethod} • {exp.expenseDate}</Text>
-                  </View>
+          expenses.map((exp) => (
+            <View key={exp.id} style={styles.expenseRow}>
+              <View style={styles.expenseLeft}>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText}>{exp.category}</Text>
                 </View>
+                <View style={styles.expenseTextCol}>
+                  <Text style={styles.expenseDesc}>{exp.description}</Text>
+                  <Text style={styles.expenseMeta}>
+                    {exp.paymentMethod} • {exp.expenseDate} {exp.location ? `• 📍 ${exp.location}` : ''}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.expenseRight}>
                 <Text style={styles.expenseAmount}>
                   -{profile.currency}{exp.amount}
                 </Text>
+                <TouchableOpacity
+                  style={styles.deleteBtn}
+                  onPress={() => deleteExpense(exp.id)}
+                >
+                  <Trash2 size={14} color="#ef4444" />
+                </TouchableOpacity>
               </View>
-            ))
+            </View>
+          ))
         )}
       </ScrollView>
 
-      {/* Floating Action Button for Step 5 */}
+      {/* Floating Action Button */}
       <TouchableOpacity
         style={styles.fab}
         onPress={() => setIsModalOpen(true)}
@@ -275,10 +311,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: '#334155',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
   },
   heroHeader: {
     flexDirection: 'row',
@@ -465,6 +497,23 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     marginBottom: 12,
   },
+  sectionHeaderNoMargin: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  historyTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginTop: 10,
+  },
+  historyLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   accountsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -519,6 +568,7 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#94a3b8',
     fontSize: 13,
+    textAlign: 'center',
   },
   expenseRow: {
     flexDirection: 'row',
@@ -535,6 +585,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
   },
   categoryBadge: {
     backgroundColor: '#334155',
@@ -547,6 +598,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
   },
+  expenseTextCol: {
+    flex: 1,
+  },
   expenseDesc: {
     fontSize: 14,
     fontWeight: '600',
@@ -556,10 +610,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#64748b',
   },
+  expenseRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
   expenseAmount: {
     fontSize: 16,
     fontWeight: '800',
     color: '#ef4444',
+  },
+  deleteBtn: {
+    padding: 4,
   },
   fab: {
     position: 'absolute',
@@ -572,11 +633,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 14,
     borderRadius: 30,
-    shadowColor: '#10b981',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
   },
   fabText: {
     color: '#ffffff',

@@ -9,13 +9,13 @@ import {
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { ExpenseCategory } from '../types';
-import { AlertCircle, TrendingUp, DollarSign, PieChart as PieIcon, BarChart3, AlertTriangle } from 'lucide-react-native';
+import { BarChart3, PieChart as PieIcon, AlertTriangle, Sparkles, PlusCircle } from 'lucide-react-native';
 
 export function AnalyticsScreen() {
-  const { profile, expenses, budgets, setCategoryBudget } = useFinanceStore();
+  const { profile, expenses, budgets } = useFinanceStore();
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
-  // Daily Chart Calculation (Last 7 days)
+  // Real Daily Chart Calculation (Sun - Sat) strictly from user's recorded database expenses
   const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const dailyData = daysOfWeek.map((dayName, idx) => {
     const totalForDay = expenses
@@ -24,13 +24,14 @@ export function AnalyticsScreen() {
 
     return {
       day: dayName,
-      amount: totalForDay || (idx === 1 ? 350 : idx === 2 ? 420 : idx === 3 ? 180 : idx === 4 ? 800 : 250),
+      amount: totalForDay,
     };
   });
 
-  const maxDaily = Math.max(...dailyData.map((d) => d.amount), 1000);
+  const maxDaily = Math.max(...dailyData.map((d) => d.amount), 1);
+  const totalDailyLogged = dailyData.reduce((sum, d) => sum + d.amount, 0);
 
-  // Category Total Calculation & Pie Chart Breakdown
+  // Real Category Breakdown calculation
   const categoryTotals: Record<ExpenseCategory, number> = {
     Food: 0,
     Fuel: 0,
@@ -47,15 +48,6 @@ export function AnalyticsScreen() {
   expenses.forEach((exp) => {
     categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
   });
-
-  // Mock defaults if fresh app
-  if (Object.values(categoryTotals).reduce((a, b) => a + b, 0) === 0) {
-    categoryTotals.Food = 4200;
-    categoryTotals.Fuel = 1200;
-    categoryTotals.Shopping = 6500;
-    categoryTotals.Bills = 2400;
-    categoryTotals.Travel = 1500;
-  }
 
   const grandTotalSpent = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
 
@@ -79,8 +71,8 @@ export function AnalyticsScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Smart Analytics</Text>
-          <Text style={styles.subtitle}>Daily breakdown, category pie chart & budget limit alerts</Text>
+          <Text style={styles.title}>Real-Time Analytics</Text>
+          <Text style={styles.subtitle}>Daily spending trends, category graphs & database stats</Text>
         </View>
 
         {/* Tab Toggle */}
@@ -98,39 +90,49 @@ export function AnalyticsScreen() {
           ))}
         </View>
 
-        {/* Phase 2: Daily Spending Chart */}
+        {/* Real Daily Spending Chart Graph */}
         {activeTab === 'daily' && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
               <BarChart3 size={20} color="#10b981" />
-              <Text style={styles.cardTitle}>Daily Spending Trend</Text>
+              <Text style={styles.cardTitle}>Daily Spending Graph (Live DB)</Text>
             </View>
 
-            <View style={styles.chartContainer}>
-              {dailyData.map((item) => {
-                const heightPct = Math.round((item.amount / maxDaily) * 100);
-                return (
-                  <View key={item.day} style={styles.barColumn}>
-                    <Text style={styles.barAmountText}>
-                      {profile.currency}{item.amount}
-                    </Text>
-                    <View style={styles.barTrack}>
-                      <View
-                        style={[
-                          styles.barFill,
-                          { height: `${Math.max(10, heightPct)}%` },
-                        ]}
-                      />
+            {totalDailyLogged === 0 ? (
+              <View style={styles.emptyState}>
+                <Sparkles size={28} color="#10b981" />
+                <Text style={styles.emptyTitle}>No Expenses Logged Yet</Text>
+                <Text style={styles.emptyDesc}>
+                  Add your first expense on the dashboard to visualize real-time daily spending bars!
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.chartContainer}>
+                {dailyData.map((item) => {
+                  const heightPct = item.amount > 0 ? Math.round((item.amount / maxDaily) * 100) : 0;
+                  return (
+                    <View key={item.day} style={styles.barColumn}>
+                      <Text style={styles.barAmountText}>
+                        {item.amount > 0 ? `${profile.currency}${item.amount}` : ''}
+                      </Text>
+                      <View style={styles.barTrack}>
+                        <View
+                          style={[
+                            styles.barFill,
+                            { height: `${Math.max(item.amount > 0 ? 8 : 0, heightPct)}%` },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.barDayText}>{item.day}</Text>
                     </View>
-                    <Text style={styles.barDayText}>{item.day}</Text>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
+            )}
           </View>
         )}
 
-        {/* Phase 2: Monthly Summary Overview */}
+        {/* Monthly Summary */}
         {activeTab === 'monthly' && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Monthly Financial Summary</Text>
@@ -157,60 +159,68 @@ export function AnalyticsScreen() {
           </View>
         )}
 
-        {/* Phase 2: Category Pie Chart Breakdown */}
+        {/* Category Pie Chart Breakdown */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
             <PieIcon size={20} color="#8b5cf6" />
-            <Text style={styles.cardTitle}>Category Spending Breakdown</Text>
+            <Text style={styles.cardTitle}>Category Breakdown Graph</Text>
           </View>
 
-          {/* Visual Pie Bar */}
-          <View style={styles.pieBarTrack}>
-            {Object.entries(categoryTotals)
-              .filter(([_, amt]) => amt > 0)
-              .map(([cat, amt]) => {
-                const pct = grandTotalSpent > 0 ? (amt / grandTotalSpent) * 100 : 0;
-                return (
-                  <View
-                    key={cat}
-                    style={[
-                      styles.pieBarSegment,
-                      {
-                        width: `${pct}%`,
-                        backgroundColor: categoryColors[cat as ExpenseCategory] || '#64748b',
-                      },
-                    ]}
-                  />
-                );
-              })}
-          </View>
+          {grandTotalSpent === 0 ? (
+            <Text style={styles.emptyDescText}>
+              Log expenses across categories (Food, Fuel, Shopping, Bills) to generate pie chart breakdown.
+            </Text>
+          ) : (
+            <>
+              {/* Visual Segment Bar */}
+              <View style={styles.pieBarTrack}>
+                {Object.entries(categoryTotals)
+                  .filter(([_, amt]) => amt > 0)
+                  .map(([cat, amt]) => {
+                    const pct = grandTotalSpent > 0 ? (amt / grandTotalSpent) * 100 : 0;
+                    return (
+                      <View
+                        key={cat}
+                        style={[
+                          styles.pieBarSegment,
+                          {
+                            width: `${pct}%`,
+                            backgroundColor: categoryColors[cat as ExpenseCategory] || '#64748b',
+                          },
+                        ]}
+                      />
+                    );
+                  })}
+              </View>
 
-          {/* Category Percentage Legend */}
-          <View style={styles.legendGrid}>
-            {Object.entries(categoryTotals)
-              .filter(([_, amt]) => amt > 0)
-              .map(([cat, amt]) => {
-                const pct = grandTotalSpent > 0 ? Math.round((amt / grandTotalSpent) * 100) : 0;
-                return (
-                  <View key={cat} style={styles.legendItem}>
-                    <View
-                      style={[
-                        styles.legendDot,
-                        { backgroundColor: categoryColors[cat as ExpenseCategory] },
-                      ]}
-                    />
-                    <Text style={styles.legendName}>{cat}</Text>
-                    <Text style={styles.legendValue}>
-                      {profile.currency}{amt} ({pct}%)
-                    </Text>
-                  </View>
-                );
-              })}
-          </View>
+              {/* Category Percentage Legend */}
+              <View style={styles.legendGrid}>
+                {Object.entries(categoryTotals)
+                  .filter(([_, amt]) => amt > 0)
+                  .map(([cat, amt]) => {
+                    const pct = grandTotalSpent > 0 ? Math.round((amt / grandTotalSpent) * 100) : 0;
+                    return (
+                      <View key={cat} style={styles.legendItem}>
+                        <View
+                          style={[
+                            styles.legendDot,
+                            { backgroundColor: categoryColors[cat as ExpenseCategory] },
+                          ]}
+                        />
+                        <Text style={styles.legendName}>{cat}</Text>
+                        <Text style={styles.legendValue}>
+                          {profile.currency}{amt} ({pct}%)
+                        </Text>
+                      </View>
+                    );
+                  })}
+              </View>
+            </>
+          )}
         </View>
 
-        {/* Phase 2: Budget by Category Limits & Limit Exceeded Alerts */}
-        <Text style={styles.sectionTitle}>Category Budget Limits</Text>
+        {/* Category Budget Limits */}
+        <Text style={styles.sectionTitle}>Category Limits & Alerts</Text>
         {budgets.map((b) => {
           const spent = categoryTotals[b.category] || 0;
           const isExceeded = spent > b.monthlyLimit;
@@ -315,6 +325,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
+  },
+  emptyState: {
+    paddingVertical: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  emptyDesc: {
+    fontSize: 12,
+    color: '#94a3b8',
+    textAlign: 'center',
+    paddingHorizontal: 16,
+  },
+  emptyDescText: {
+    fontSize: 13,
+    color: '#94a3b8',
+    paddingVertical: 10,
   },
   chartContainer: {
     flexDirection: 'row',
