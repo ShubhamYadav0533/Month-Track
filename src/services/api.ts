@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5001/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://month-track.onrender.com/api';
 
 export interface SyncSetupPayload {
   name: string;
