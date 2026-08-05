@@ -1,13 +1,18 @@
 import { Request, Response } from 'express';
-import { prisma } from '../config/db';
+import { supabase } from '../config/db';
 
 export const getExpenses = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.query;
-    const expenses = await prisma.expense.findMany({
-      where: userId ? { userId: String(userId) } : undefined,
-      orderBy: { expenseDate: 'desc' },
-    });
+    let query = supabase.from('expenses').select('*').order('expense_date', { ascending: false });
+
+    if (userId) {
+      query = query.eq('user_id', String(userId));
+    }
+
+    const { data: expenses, error } = await query;
+    if (error) throw error;
+
     res.json({ success: true, expenses });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -17,38 +22,39 @@ export const getExpenses = async (req: Request, res: Response): Promise<void> =>
 export const createExpense = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId, accountId, amount, category, description, paymentMethod, location, receiptUrl, expenseDate } = req.body;
-
     const numAmount = parseFloat(amount);
 
-    // Create expense entry
-    const expense = await prisma.expense.create({
-      data: {
-        userId: userId || 'default_user',
-        accountId,
+    const { data: expense, error } = await supabase
+      .from('expenses')
+      .insert({
+        user_id: userId,
+        account_id: accountId,
         amount: numAmount,
         category,
         description: description || category,
-        paymentMethod,
+        payment_method: paymentMethod,
         location,
-        receiptUrl,
-        expenseDate: expenseDate || new Date().toISOString().split('T')[0],
-      },
-    });
+        receipt_url: receiptUrl,
+        expense_date: expenseDate || new Date().toISOString().split('T')[0],
+      })
+      .select()
+      .single();
 
-    // Update account balance
+    if (error) throw error;
+
+    // Deduct amount from Account balance in Supabase
     if (accountId) {
-      const acc = await prisma.account.findUnique({ where: { id: accountId } });
+      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', accountId).single();
       if (acc) {
-        await prisma.account.update({
-          where: { id: accountId },
-          data: { balance: Math.max(0, acc.balance - numAmount) },
-        });
+        await supabase
+          .from('accounts')
+          .update({ balance: Math.max(0, acc.balance - numAmount) })
+          .eq('id', accountId);
       }
     }
 
     res.json({ success: true, expense });
   } catch (error: any) {
-    console.error('Error creating expense:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
@@ -56,17 +62,21 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
 export const deleteExpense = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const exp = await prisma.expense.findUnique({ where: { id } });
+    const { data: exp } = await supabase.from('expenses').select('account_id, amount').eq('id', id).single();
 
-    if (exp && exp.accountId) {
-      // Revert money to account
-      await prisma.account.update({
-        where: { id: exp.accountId },
-        data: { balance: { increment: exp.amount } },
-      });
+    if (exp && exp.account_id) {
+      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', exp.account_id).single();
+      if (acc) {
+        await supabase
+          .from('accounts')
+          .update({ balance: acc.balance + exp.amount })
+          .eq('id', exp.account_id);
+      }
     }
 
-    await prisma.expense.delete({ where: { id } });
+    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    if (error) throw error;
+
     res.json({ success: true, message: 'Expense deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

@@ -1,3 +1,15 @@
-import { PrismaClient } from '@prisma/client';
+import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
+import dotenv from 'dotenv';
 
-export const prisma = new PrismaClient();
+dotenv.config();
+
+// Polyfill WebSocket for Supabase in Node.js
+if (typeof globalThis.WebSocket === 'undefined') {
+  (globalThis as any).WebSocket = WebSocket;
+}
+
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
