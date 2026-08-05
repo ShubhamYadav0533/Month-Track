@@ -63,36 +63,20 @@ interface FinanceState {
 const DEFAULT_PROFILE: UserProfile = {
   id: 'user_1',
   name: 'User',
-  monthlyIncome: 40000,
+  monthlyIncome: 0,
   salaryDate: 1,
-  savingsGoal: 10000,
+  savingsGoal: 0,
   currency: '₹',
   isSetupComplete: false,
 };
-
-const DEFAULT_ACCOUNTS: Account[] = [
-  { id: 'acc_wallet', name: 'Wallet Cash', type: 'wallet', balance: 2000, icon: 'wallet', color: '#10b981' },
-  { id: 'acc_bank', name: 'Bank Balance', type: 'bank', balance: 8000, icon: 'building', color: '#3b82f6' },
-  { id: 'acc_upi', name: 'UPI Balance', type: 'upi', balance: 1500, icon: 'smartphone', color: '#8b5cf6' },
-  { id: 'acc_card', name: 'Credit Card', type: 'card', balance: 0, creditLimit: 50000, icon: 'credit-card', color: '#f59e0b' },
-];
-
-const DEFAULT_BUDGETS: CategoryBudget[] = [
-  { category: 'Food', monthlyLimit: 6000 },
-  { category: 'Fuel', monthlyLimit: 3000 },
-  { category: 'Shopping', monthlyLimit: 5000 },
-  { category: 'Medical', monthlyLimit: 2000 },
-  { category: 'Recharge', monthlyLimit: 1000 },
-  { category: 'Entertainment', monthlyLimit: 3000 },
-];
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
       profile: DEFAULT_PROFILE,
-      accounts: DEFAULT_ACCOUNTS,
-      expenses: [], // Pure real user data only - zero mock dummy entries
-      budgets: DEFAULT_BUDGETS,
+      accounts: [],
+      expenses: [],
+      budgets: [],
       savingsGoals: [],
       recurring: [],
       notifications: [],
@@ -106,9 +90,20 @@ export const useFinanceStore = create<FinanceState>()(
 
         set({ isLoading: true });
         const res = await fetchFullUserDataFromSupabase(userId);
-        if (res.success && res.expenses) {
+        if (res.success) {
           set((state) => ({
-            expenses: res.expenses.length > 0 ? res.expenses : state.expenses,
+            profile: res.profile
+              ? {
+                  id: res.profile.id,
+                  name: res.profile.name,
+                  monthlyIncome: parseFloat(res.profile.monthly_income),
+                  salaryDate: parseInt(res.profile.salary_date, 10),
+                  savingsGoal: parseFloat(res.profile.savings_goal),
+                  currency: res.profile.currency,
+                  isSetupComplete: true,
+                }
+              : state.profile,
+            expenses: res.expenses || [],
             accounts: res.accounts.length > 0
               ? res.accounts.map((a: any) => ({
                   id: a.id,
@@ -120,6 +115,8 @@ export const useFinanceStore = create<FinanceState>()(
                   color: a.type === 'wallet' ? '#10b981' : a.type === 'bank' ? '#3b82f6' : a.type === 'upi' ? '#8b5cf6' : '#f59e0b',
                 }))
               : state.accounts,
+            budgets: res.budgets || [],
+            savingsGoals: res.goals || [],
             isLoading: false,
           }));
         } else {
@@ -127,7 +124,7 @@ export const useFinanceStore = create<FinanceState>()(
         }
       },
 
-      setupUser: (profileData, walletBal, bankBal, upiBal, cardLimit = 50000) => {
+      setupUser: (profileData, walletBal, bankBal, upiBal, cardLimit = 0) => {
         const newProfile = {
           ...get().profile,
           ...profileData,
@@ -144,7 +141,7 @@ export const useFinanceStore = create<FinanceState>()(
         set({
           profile: newProfile,
           accounts: newAccounts,
-          expenses: [], // Reset to clean slate for new setup
+          expenses: [],
         });
 
         // Sync to Supabase DB asynchronously
@@ -327,9 +324,9 @@ export const useFinanceStore = create<FinanceState>()(
       resetAllData: () => {
         set({
           profile: DEFAULT_PROFILE,
-          accounts: DEFAULT_ACCOUNTS,
+          accounts: [],
           expenses: [],
-          budgets: DEFAULT_BUDGETS,
+          budgets: [],
           savingsGoals: [],
           recurring: [],
           splitExpenses: [],
