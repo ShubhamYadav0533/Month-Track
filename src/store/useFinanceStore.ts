@@ -13,6 +13,13 @@ import {
   ExpenseCategory,
 } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
+import {
+  saveUserToSupabase,
+  saveAccountsToSupabase,
+  saveExpenseToSupabase,
+  saveBudgetToSupabase,
+  saveSavingsGoalToSupabase,
+} from '../services/supabaseService';
 
 interface FinanceState {
   profile: UserProfile;
@@ -131,22 +138,36 @@ export const useFinanceStore = create<FinanceState>()(
       isLocked: false,
 
       setupUser: (profileData, walletBal, bankBal, upiBal, cardLimit = 50000) => {
-        set((state) => ({
-          profile: {
-            ...state.profile,
-            ...profileData,
-            isSetupComplete: true,
-          },
-          accounts: [
-            { id: 'acc_wallet', name: 'Wallet Cash', type: 'wallet', balance: walletBal, icon: 'wallet', color: '#10b981' },
-            { id: 'acc_bank', name: 'Bank Balance', type: 'bank', balance: bankBal, icon: 'building', color: '#3b82f6' },
-            { id: 'acc_upi', name: 'UPI Balance', type: 'upi', balance: upiBal, icon: 'smartphone', color: '#8b5cf6' },
-            { id: 'acc_card', name: 'Credit Card', type: 'card', balance: 0, creditLimit: cardLimit, icon: 'credit-card', color: '#f59e0b' },
-          ],
-        }));
+        const newProfile = {
+          ...get().profile,
+          ...profileData,
+          isSetupComplete: true,
+        };
+
+        const newAccounts: Account[] = [
+          { id: 'acc_wallet', name: 'Wallet Cash', type: 'wallet', balance: walletBal, icon: 'wallet', color: '#10b981' },
+          { id: 'acc_bank', name: 'Bank Balance', type: 'bank', balance: bankBal, icon: 'building', color: '#3b82f6' },
+          { id: 'acc_upi', name: 'UPI Balance', type: 'upi', balance: upiBal, icon: 'smartphone', color: '#8b5cf6' },
+          { id: 'acc_card', name: 'Credit Card', type: 'card', balance: 0, creditLimit: cardLimit, icon: 'credit-card', color: '#f59e0b' },
+        ];
+
+        set({
+          profile: newProfile,
+          accounts: newAccounts,
+        });
+
+        // Sync to Supabase DB asynchronously
+        saveUserToSupabase(newProfile);
+        saveAccountsToSupabase(newProfile.id, newAccounts);
       },
 
-      updateProfile: (data) => set((state) => ({ profile: { ...state.profile, ...data } })),
+      updateProfile: (data) => {
+        set((state) => {
+          const updated = { ...state.profile, ...data };
+          saveUserToSupabase(updated);
+          return { profile: updated };
+        });
+      },
 
       addExpense: (expenseData) => {
         const id = `exp_${Date.now()}`;
@@ -157,13 +178,16 @@ export const useFinanceStore = create<FinanceState>()(
         };
 
         set((state) => {
-          // Deduct money from matching account
           const updatedAccounts = state.accounts.map((acc) => {
             if (acc.id === expenseData.accountId || acc.name.toLowerCase().includes(expenseData.paymentMethod.toLowerCase())) {
               return { ...acc, balance: Math.max(0, acc.balance - expenseData.amount) };
             }
             return acc;
           });
+
+          // Sync to Supabase DB
+          saveExpenseToSupabase(state.profile.id, newExpense);
+          saveAccountsToSupabase(state.profile.id, updatedAccounts);
 
           return {
             expenses: [newExpense, ...state.expenses],
@@ -192,14 +216,18 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       updateAccountBalance: (accountId, newBalance) => {
-        set((state) => ({
-          accounts: state.accounts.map((a) => (a.id === accountId ? { ...a, balance: newBalance } : a)),
-        }));
+        set((state) => {
+          const updatedAccounts = state.accounts.map((a) => (a.id === accountId ? { ...a, balance: newBalance } : a));
+          saveAccountsToSupabase(state.profile.id, updatedAccounts);
+          return { accounts: updatedAccounts };
+        });
       },
 
       setCategoryBudget: (category, monthlyLimit) => {
         set((state) => {
           const existing = state.budgets.find((b) => b.category === category);
+          saveBudgetToSupabase(state.profile.id, category, monthlyLimit);
+
           if (existing) {
             return {
               budgets: state.budgets.map((b) => (b.category === category ? { category, monthlyLimit } : b)),
@@ -211,15 +239,24 @@ export const useFinanceStore = create<FinanceState>()(
 
       addSavingsGoal: (goalData) => {
         const newGoal: SavingsGoal = { ...goalData, id: `goal_${Date.now()}` };
-        set((state) => ({ savingsGoals: [...state.savingsGoals, newGoal] }));
+        set((state) => {
+          saveSavingsGoalToSupabase(state.profile.id, newGoal);
+          return { savingsGoals: [...state.savingsGoals, newGoal] };
+        });
       },
 
       updateSavedGoalAmount: (id, additionalAmount) => {
-        set((state) => ({
-          savingsGoals: state.savingsGoals.map((g) =>
-            g.id === id ? { ...g, savedAmount: Math.min(g.targetAmount, g.savedAmount + additionalAmount) } : g
-          ),
-        }));
+        set((state) => {
+          const updatedGoals = state.savingsGoals.map((g) => {
+            if (g.id === id) {
+              const updated = { ...g, savedAmount: Math.min(g.targetAmount, g.savedAmount + additionalAmount) };
+              saveSavingsGoalToSupabase(state.profile.id, updated);
+              return updated;
+            }
+            return g;
+          });
+          return { savingsGoals: updatedGoals };
+        });
       },
 
       addRecurringTransaction: (recData) => {
@@ -235,8 +272,7 @@ export const useFinanceStore = create<FinanceState>()(
 
           state.recurring.forEach((rec) => {
             if (rec.autoDeduct && rec.nextDueDate <= todayStr) {
-              // Add expense
-              updatedExpenses.unshift({
+              const newExp: Expense = {
                 id: `exp_auto_${Date.now()}_${rec.id}`,
                 accountId: rec.accountId,
                 amount: rec.amount,
@@ -246,15 +282,18 @@ export const useFinanceStore = create<FinanceState>()(
                 expenseDate: todayStr,
                 createdAt: new Date().toISOString(),
                 isRecurring: true,
-              });
+              };
 
-              // Deduct from balance
+              updatedExpenses.unshift(newExp);
+              saveExpenseToSupabase(state.profile.id, newExp);
+
               updatedAccounts = updatedAccounts.map((a) =>
                 a.id === rec.accountId ? { ...a, balance: Math.max(0, a.balance - rec.amount) } : a
               );
             }
           });
 
+          saveAccountsToSupabase(state.profile.id, updatedAccounts);
           return { accounts: updatedAccounts, expenses: updatedExpenses };
         });
       },
