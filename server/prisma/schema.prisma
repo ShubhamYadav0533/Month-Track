@@ -1,0 +1,128 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  monthlyIncome Float    @default(40000) @map("monthly_income")
+  salaryDate    Int      @default(1) @map("salary_date")
+  savingsGoal   Float    @default(10000) @map("savings_goal")
+  currency      String   @default("₹")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  accounts      Account[]
+  expenses      Expense[]
+  incomes       Income[]
+  budgets       Budget[]
+  savingsGoals  SavingsGoal[]
+  recurring     RecurringTransaction[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Account {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  type        String   // wallet, bank, upi, card
+  balance     Float    @default(0.0)
+  creditLimit Float?   @map("credit_limit")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  expenses    Expense[]
+
+  @@map("accounts")
+}
+
+model Expense {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId     String   @map("account_id")
+  account       Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  amount        Float
+  category      String
+  description   String
+  paymentMethod String   @map("payment_method")
+  location      String?
+  receiptUrl    String?  @map("receipt_url")
+  expenseDate   String   @map("expense_date")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("expenses")
+}
+
+model Income {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount     Float
+  source     String
+  incomeDate String   @map("income_date")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("income")
+}
+
+model Budget {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     String
+  monthlyLimit Float    @map("monthly_limit")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, category])
+  @@map("budgets")
+}
+
+model SavingsGoal {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title        String
+  targetAmount Float     @map("target_amount")
+  savedAmount  Float     @default(0.0) @map("saved_amount")
+  targetDate   String?   @map("target_date")
+  icon         String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@map("savings_goals")
+}
+
+model RecurringTransaction {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        String   @default("expense")
+  amount      Float
+  category    String
+  frequency   String   @default("monthly")
+  nextDueDate String   @map("next_due_date")
+  autoDeduct  Boolean  @default(true) @map("auto_deduct")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("recurring_transactions")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false) @map("is_read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
