@@ -164,3 +164,131 @@ export interface DailyBudgetStats {
   predictedDaysUntilDepletion: number;
   monthlySavingsPercentage: number;
 }
+
+// ─────────────────────────────────────────────────
+// HRMS — Attendance Management System Types
+// ─────────────────────────────────────────────────
+
+export type AttendanceStatus =
+  | 'Present'
+  | 'Late'
+  | 'Half Day'
+  | 'Absent'
+  | 'Holiday'
+  | 'Leave'
+  | 'Work From Home'
+  | 'On Break';
+
+export type LeaveType =
+  | 'Casual'
+  | 'Sick'
+  | 'Paid'
+  | 'Unpaid'
+  | 'Emergency'
+  | 'Half Day'
+  | 'Work From Home';
+
+export type LeaveStatus = 'Pending' | 'Approved' | 'Rejected';
+
+export interface Employee {
+  id: string;
+  employeeCode: string;
+  fullName: string;
+  email: string;
+  department: string;
+  designation: string;
+  joiningDate: string;
+  shiftId: string;
+  officeLocation: string;
+  managerName: string;
+  avatarUrl?: string;
+  isSetupComplete: boolean;
+  pinCode?: string;
+  isBiometricsEnabled?: boolean;
+}
+
+export interface Shift {
+  id: string;
+  shiftName: string;
+  startTime: string;
+  endTime: string;
+  requiredHours: number;
+  breakMinutes: number;
+  graceMinutes: number;
+}
+
+export interface OfficeLocation {
+  id: string;
+  officeName: string;
+  latitude: number;
+  longitude: number;
+  allowedRadius: number;
+}
+
+export interface BreakRecord {
+  id: string;
+  attendanceId: string;
+  breakStart: string;
+  breakEnd?: string;
+  durationMinutes: number;
+  breakType: 'Lunch' | 'Tea/Coffee' | 'Personal' | 'Other';
+}
+
+export interface AttendanceRecord {
+  id: string;
+  employeeId: string;
+  attendanceDate: string;
+  checkIn?: string;
+  checkOut?: string;
+  totalWorkMinutes: number;
+  breakMinutes: number;
+  overtimeMinutes: number;
+  lateMinutes: number;
+  earlyLeaveMinutes: number;
+  status: AttendanceStatus;
+  notes?: string;
+  gpsLocation?: string;
+  officeName?: string;
+  deviceName?: string;
+  networkType?: string;
+  batteryPct?: number;
+  ipAddress?: string;
+  photoUrl?: string;
+  breaks?: BreakRecord[];
+  createdAt: string;
+}
+
+export interface LeaveRequest {
+  id: string;
+  employeeId: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  totalDays: number;
+  reason: string;
+  attachment?: string;
+  status: LeaveStatus;
+  approvedBy?: string;
+  comments?: string;
+  createdAt: string;
+}
+
+export interface Holiday {
+  id: string;
+  holidayName: string;
+  holidayDate: string;
+  isOptional: boolean;
+}
+
+export interface AttendanceStats {
+  monthlyAttendancePct: number;
+  totalWorkingHours: number;
+  overtimeHours: number;
+  lateArrivalsCount: number;
+  leavesRemaining: number;
+  pendingLeaveRequests: number;
+  presentDaysCount: number;
+  absentDaysCount: number;
+  leaveDaysCount: number;
+  averageDailyHours: number;
+}

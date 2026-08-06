@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS holidays (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    holiday_name VARCHAR(255) NOT NULL,
+    holiday_date DATE NOT NULL UNIQUE,
+    is_optional BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
