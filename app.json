@@ -10,6 +10,7 @@
     "ios": {
       "icon": "./assets/expo.icon"
     },
+    "jsEngine": "hermes",
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
@@ -18,7 +19,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.Track_all"
+      "package": "com.anonymous.Track_all",
+      "jsEngine": "hermes"
     },
     "web": {
       "output": "single",
