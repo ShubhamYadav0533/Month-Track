@@ -52,6 +52,121 @@ export type Database = {
           },
         ]
       }
+      attendance: {
+        Row: {
+          attendance_date: string
+          battery_pct: number | null
+          break_minutes: number
+          check_in: string | null
+          check_out: string | null
+          created_at: string | null
+          device_name: string | null
+          early_leave_minutes: number
+          employee_id: string
+          gps_location: string | null
+          id: string
+          ip_address: string | null
+          late_minutes: number
+          network_type: string | null
+          notes: string | null
+          office_name: string | null
+          overtime_minutes: number
+          photo_url: string | null
+          status: string
+          total_work_minutes: number
+        }
+        Insert: {
+          attendance_date: string
+          battery_pct?: number | null
+          break_minutes?: number
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string | null
+          device_name?: string | null
+          early_leave_minutes?: number
+          employee_id: string
+          gps_location?: string | null
+          id?: string
+          ip_address?: string | null
+          late_minutes?: number
+          network_type?: string | null
+          notes?: string | null
+          office_name?: string | null
+          overtime_minutes?: number
+          photo_url?: string | null
+          status?: string
+          total_work_minutes?: number
+        }
+        Update: {
+          attendance_date?: string
+          battery_pct?: number | null
+          break_minutes?: number
+          check_in?: string | null
+          check_out?: string | null
+          created_at?: string | null
+          device_name?: string | null
+          early_leave_minutes?: number
+          employee_id?: string
+          gps_location?: string | null
+          id?: string
+          ip_address?: string | null
+          late_minutes?: number
+          network_type?: string | null
+          notes?: string | null
+          office_name?: string | null
+          overtime_minutes?: number
+          photo_url?: string | null
+          status?: string
+          total_work_minutes?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      attendance_breaks: {
+        Row: {
+          attendance_id: string
+          break_end: string | null
+          break_start: string
+          break_type: string
+          created_at: string | null
+          duration_minutes: number
+          id: string
+        }
+        Insert: {
+          attendance_id: string
+          break_end?: string | null
+          break_start: string
+          break_type?: string
+          created_at?: string | null
+          duration_minutes?: number
+          id?: string
+        }
+        Update: {
+          attendance_id?: string
+          break_end?: string | null
+          break_start?: string
+          break_type?: string
+          created_at?: string | null
+          duration_minutes?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_breaks_attendance_id_fkey"
+            columns: ["attendance_id"]
+            isOneToOne: false
+            referencedRelation: "attendance"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bills: {
         Row: {
           amount: number
@@ -138,6 +253,7 @@ export type Database = {
           manager_name: string | null
           office_location: string
           shift_id: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string | null
@@ -151,6 +267,7 @@ export type Database = {
           manager_name?: string | null
           office_location: string
           shift_id?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string | null
@@ -164,8 +281,24 @@ export type Database = {
           manager_name?: string | null
           office_location?: string
           shift_id?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employees_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_employees_shift"
+            columns: ["shift_id"]
+            isOneToOne: false
+            referencedRelation: "shifts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expenses: {
         Row: {
@@ -265,6 +398,30 @@ export type Database = {
           },
         ]
       }
+      holidays: {
+        Row: {
+          created_at: string | null
+          holiday_date: string
+          holiday_name: string
+          id: string
+          is_optional: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          holiday_date: string
+          holiday_name: string
+          id?: string
+          is_optional?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          holiday_date?: string
+          holiday_name?: string
+          id?: string
+          is_optional?: boolean | null
+        }
+        Relationships: []
+      }
       income: {
         Row: {
           amount: number
@@ -296,6 +453,59 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_requests: {
+        Row: {
+          approved_by: string | null
+          attachment: string | null
+          comments: string | null
+          created_at: string | null
+          employee_id: string
+          end_date: string
+          id: string
+          leave_type: string
+          reason: string
+          start_date: string
+          status: string
+          total_days: number
+        }
+        Insert: {
+          approved_by?: string | null
+          attachment?: string | null
+          comments?: string | null
+          created_at?: string | null
+          employee_id: string
+          end_date: string
+          id?: string
+          leave_type: string
+          reason: string
+          start_date: string
+          status?: string
+          total_days?: number
+        }
+        Update: {
+          approved_by?: string | null
+          attachment?: string | null
+          comments?: string | null
+          created_at?: string | null
+          employee_id?: string
+          end_date?: string
+          id?: string
+          leave_type?: string
+          reason?: string
+          start_date?: string
+          status?: string
+          total_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
             referencedColumns: ["id"]
           },
         ]
@@ -334,6 +544,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      office_locations: {
+        Row: {
+          allowed_radius: number
+          created_at: string | null
+          id: string
+          latitude: number
+          longitude: number
+          office_name: string
+        }
+        Insert: {
+          allowed_radius?: number
+          created_at?: string | null
+          id?: string
+          latitude: number
+          longitude: number
+          office_name: string
+        }
+        Update: {
+          allowed_radius?: number
+          created_at?: string | null
+          id?: string
+          latitude?: number
+          longitude?: number
+          office_name?: string
+        }
+        Relationships: []
       }
       recurring_transactions: {
         Row: {
@@ -419,6 +656,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      shifts: {
+        Row: {
+          break_minutes: number
+          created_at: string | null
+          end_time: string
+          grace_minutes: number
+          id: string
+          required_hours: number
+          shift_name: string
+          start_time: string
+        }
+        Insert: {
+          break_minutes?: number
+          created_at?: string | null
+          end_time: string
+          grace_minutes?: number
+          id?: string
+          required_hours?: number
+          shift_name: string
+          start_time: string
+        }
+        Update: {
+          break_minutes?: number
+          created_at?: string | null
+          end_time?: string
+          grace_minutes?: number
+          id?: string
+          required_hours?: number
+          shift_name?: string
+          start_time?: string
+        }
+        Relationships: []
       }
       tasks: {
         Row: {
