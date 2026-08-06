@@ -14,7 +14,7 @@ import { useFinanceStore } from '../store/useFinanceStore';
 import { ExpenseCategory } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import { parseReceiptImage, ParsedReceipt } from '../utils/ocrParser';
-import { X, Camera, MapPin, Tag, CreditCard, Sparkles, Check } from 'lucide-react-native';
+import { X, Camera, MapPin, Sparkles, Check } from 'lucide-react-native';
 
 const CATEGORIES: { name: ExpenseCategory; icon: string; color: string }[] = [
   { name: 'Food', icon: '🍔', color: '#f59e0b' },

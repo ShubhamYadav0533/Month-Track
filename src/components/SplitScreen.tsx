@@ -9,7 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { Users, Plus, Check, UserCheck } from 'lucide-react-native';
+import { Users, Plus, UserCheck } from 'lucide-react-native';
 
 export function SplitScreen() {
   const { profile, splitExpenses, addSplitExpense, settleSplitExpense } = useFinanceStore();
@@ -82,7 +82,7 @@ export function SplitScreen() {
                 Your Share: {profile.currency}{item.myShare}
               </Text>
               <Text style={styles.shareText}>
-                {item.friendName}'s Share: {profile.currency}{item.friendShare}
+                {item.friendName}&apos;s Share: {profile.currency}{item.friendShare}
               </Text>
             </View>
 
@@ -127,7 +127,7 @@ export function SplitScreen() {
             </View>
 
             <View style={[styles.inputGroup, { flex: 1 }]}>
-              <Text style={styles.label}>Friend's Name</Text>
+              <Text style={styles.label}>Friend&apos;s Name</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Alex"

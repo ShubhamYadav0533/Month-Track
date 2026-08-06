@@ -5,13 +5,12 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { exportExpensesToCSV, generateBackupJSON } from '../utils/exportUtils';
-import { Search, Download, Lock, Shield, Trash2, FileSpreadsheet, RefreshCw } from 'lucide-react-native';
+import { Search, Download, Shield, Trash2, FileSpreadsheet } from 'lucide-react-native';
 
 export function SettingsExportScreen() {
   const { profile, accounts, expenses, updateProfile, resetAllData } = useFinanceStore();

@@ -10,7 +10,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { RefreshCw, Plus, Zap, Tv, Wifi, Calendar } from 'lucide-react-native';
+import { RefreshCw, Plus, Zap, Tv, Wifi } from 'lucide-react-native';
 
 export function RecurringScreen() {
   const { profile, accounts, recurring, addRecurringTransaction, processRecurringDeductions } =
@@ -18,7 +18,7 @@ export function RecurringScreen() {
 
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState<'Entertainment' | 'Bills' | 'Recharge'>('Entertainment');
+  const [category] = useState<'Entertainment' | 'Bills' | 'Recharge'>('Entertainment');
   const [autoDeduct, setAutoDeduct] = useState(true);
 
   const handleAddRecurring = () => {

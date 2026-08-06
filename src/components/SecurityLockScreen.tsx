@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { ShieldCheck, Fingerprint, Lock } from 'lucide-react-native';
+import { Fingerprint, Lock } from 'lucide-react-native';
 
 export function SecurityLockScreen() {
   const [pin, setPin] = useState('');

@@ -1,4 +1,4 @@
-import { Expense, CategoryBudget, NotificationItem, UserProfile } from '../types';
+import { Expense, CategoryBudget, UserProfile } from '../types';
 import { getFormattedDate } from './budgetCalculator';
 
 export interface AISuggestion {

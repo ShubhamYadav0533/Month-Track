@@ -43,13 +43,18 @@
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
+    "concurrently": "^9.2.4",
     "eas-cli": "^21.5.0",
+    "eslint": "^9.0.0",
+    "eslint-config-expo": "~57.0.1",
     "typescript": "~6.0.3"
   },
   "scripts": {
     "build": "cd server && npm install && npm run build",
-    "start": "node server/dist/index.js",
+    "server:start": "node server/dist/index.js",
     "expo:start": "expo start",
+    "start": "concurrently --kill-others --names \"server,expo\" --prefix-colors \"blue,green\" \"npm run server:start\" \"npm run expo:start\"",
+    "check": "npm run lint && npx tsc --noEmit && npm run build",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",

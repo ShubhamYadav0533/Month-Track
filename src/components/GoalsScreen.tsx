@@ -9,7 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { Target, Plus, Laptop, Bike, Sparkles, CheckCircle } from 'lucide-react-native';
+import { Plus, Laptop, Bike } from 'lucide-react-native';
 
 export function GoalsScreen() {
   const { profile, savingsGoals, addSavingsGoal, updateSavedGoalAmount } = useFinanceStore();

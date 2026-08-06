@@ -1,5 +1,5 @@
 import { supabase } from '../config/supabaseClient';
-import { UserProfile, Account, Expense, CategoryBudget, SavingsGoal } from '../types';
+import { UserProfile, Account, Expense, SavingsGoal } from '../types';
 
 /**
  * 1. Store User Profile in Supabase DB

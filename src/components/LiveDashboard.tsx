@@ -35,7 +35,6 @@ export function LiveDashboard() {
     accounts,
     expenses,
     lockApp,
-    processRecurringDeductions,
     deleteExpense,
     loadSupabaseData,
     isLoading,
@@ -45,7 +44,7 @@ export function LiveDashboard() {
 
   useEffect(() => {
     loadSupabaseData();
-  }, []);
+  }, [loadSupabaseData]);
 
   const stats = calculateDailyBudgetStats(profile, accounts, expenses);
 
@@ -219,7 +218,7 @@ export function LiveDashboard() {
         {expenses.length === 0 ? (
           <View style={styles.emptyState}>
             <CheckCircle2 size={32} color="#10b981" />
-            <Text style={styles.emptyText}>No expenses logged yet. Tap "+ Add Expense" below!</Text>
+            <Text style={styles.emptyText}>No expenses logged yet. Tap &quot;+ Add Expense&quot; below!</Text>
           </View>
         ) : (
           expenses.map((exp) => (

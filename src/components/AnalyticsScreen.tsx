@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { ExpenseCategory } from '../types';
-import { BarChart3, PieChart as PieIcon, AlertTriangle, Sparkles, PlusCircle } from 'lucide-react-native';
+import { BarChart3, PieChart as PieIcon, AlertTriangle, Sparkles } from 'lucide-react-native';
 
 export function AnalyticsScreen() {
   const { profile, expenses, budgets } = useFinanceStore();

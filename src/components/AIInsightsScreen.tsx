@@ -68,7 +68,7 @@ export function AIInsightsScreen() {
             <Text style={styles.voiceTitle}>Voice & Natural Language Expense Entry</Text>
           </View>
           <Text style={styles.voiceSubtitle}>
-            Type or speak expense phrases like "Spent ₹250 on lunch" or "Spent ₹800 petrol":
+            Type or speak expense phrases like &quot;Spent ₹250 on lunch&quot; or &quot;Spent ₹800 petrol&quot;:
           </Text>
           <View style={styles.voiceInputRow}>
             <TextInput
