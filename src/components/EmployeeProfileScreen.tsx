@@ -11,9 +11,11 @@ import {
 } from 'react-native';
 import { Shield, Save } from 'lucide-react-native';
 import { useAttendanceStore } from '../store/useAttendanceStore';
+import { useFinanceStore } from '../store/useFinanceStore';
 
 export function EmployeeProfileScreen() {
   const { employee, updateEmployeeProfile } = useAttendanceStore();
+  const { profile: financeProfile, updateProfile: updateFinanceProfile } = useFinanceStore();
 
   const [fullName, setFullName] = useState(employee.fullName);
   const [email, setEmail] = useState(employee.email);
@@ -114,8 +116,51 @@ export function EmployeeProfileScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Default Landing View Preference */}
+        <Text style={styles.sectionTitle}>⚙️ App Preferences</Text>
+        <View style={styles.securityCard}>
+          <Text style={{ color: '#94a3b8', fontSize: 12, fontWeight: '600', marginBottom: 8 }}>Default Landing View</Text>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                backgroundColor: (financeProfile.defaultAppMode || 'finance') === 'finance' ? '#10b981' : '#0f172a',
+                borderWidth: 1,
+                borderColor: '#334155',
+                alignItems: 'center',
+              }}
+              onPress={() => updateFinanceProfile({ defaultAppMode: 'finance' })}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: (financeProfile.defaultAppMode || 'finance') === 'finance' ? '#ffffff' : '#94a3b8' }}>
+                💰 Finance OS
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                backgroundColor: financeProfile.defaultAppMode === 'hrms' ? '#10b981' : '#0f172a',
+                borderWidth: 1,
+                borderColor: '#334155',
+                alignItems: 'center',
+              }}
+              onPress={() => updateFinanceProfile({ defaultAppMode: 'hrms' })}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: financeProfile.defaultAppMode === 'hrms' ? '#ffffff' : '#94a3b8' }}>
+                📋 HRMS System
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* Security Settings */}
-        <Text style={styles.sectionTitle}>🔒 Security & Biometrics</Text>
+        <Text style={[styles.sectionTitle, { marginTop: 20 }]}>🔒 Security & Biometrics</Text>
         <View style={styles.securityCard}>
           <View style={styles.secRow}>
             <Shield size={20} color="#10b981" />

@@ -60,7 +60,7 @@ type HrmsTab =
 
 export default function MainApp() {
   const { profile, isLocked } = useFinanceStore();
-  const [appMode, setAppMode] = useState<AppMode>('hrms');
+  const [appMode, setAppMode] = useState<AppMode>(profile.defaultAppMode || 'finance');
   const [financeTab, setFinanceTab] = useState<FinanceTab>('dashboard');
   const [hrmsTab, setHrmsTab] = useState<HrmsTab>('hrms_dashboard');
 

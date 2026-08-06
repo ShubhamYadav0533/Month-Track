@@ -101,6 +101,7 @@ const DEFAULT_PROFILE: UserProfile = {
   savingsGoal: 0,
   currency: '₹',
   isSetupComplete: false,
+  defaultAppMode: 'finance',
 };
 
 const INITIAL_ACCOUNTS: Account[] = [

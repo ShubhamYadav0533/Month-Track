@@ -119,6 +119,45 @@ export function SettingsExportScreen() {
             <Text style={styles.cardTitle}>App Preferences & Security</Text>
           </View>
 
+          <Text style={styles.label}>Default Landing View</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                backgroundColor: (profile.defaultAppMode || 'finance') === 'finance' ? '#10b981' : '#0f172a',
+                borderWidth: 1,
+                borderColor: '#334155',
+                alignItems: 'center',
+              }}
+              onPress={() => updateProfile({ defaultAppMode: 'finance' })}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: (profile.defaultAppMode || 'finance') === 'finance' ? '#ffffff' : '#94a3b8' }}>
+                💰 Finance OS
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                paddingVertical: 10,
+                paddingHorizontal: 8,
+                borderRadius: 12,
+                backgroundColor: profile.defaultAppMode === 'hrms' ? '#10b981' : '#0f172a',
+                borderWidth: 1,
+                borderColor: '#334155',
+                alignItems: 'center',
+              }}
+              onPress={() => updateProfile({ defaultAppMode: 'hrms' })}
+            >
+              <Text style={{ fontSize: 12, fontWeight: '700', color: profile.defaultAppMode === 'hrms' ? '#ffffff' : '#94a3b8' }}>
+                📋 HRMS System
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>Dark Mode (Default)</Text>
             <Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#334155', true: '#10b981' }} />

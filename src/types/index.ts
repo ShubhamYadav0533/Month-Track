@@ -44,6 +44,7 @@ export interface UserProfile {
   isSetupComplete: boolean;
   pinCode?: string;
   isBiometricsEnabled?: boolean;
+  defaultAppMode?: 'finance' | 'hrms';
 }
 
 export interface Account {
