@@ -14,13 +14,13 @@ import { Wallet, Building2, Smartphone, CreditCard, PiggyBank, Calendar, ArrowRi
 export function SetupWizard() {
   const setupUser = useFinanceStore((state) => state.setupUser);
 
-  const [income, setIncome] = useState('40000');
+  const [income, setIncome] = useState('');
   const [salaryDate, setSalaryDate] = useState('1');
-  const [savingsGoal, setSavingsGoal] = useState('10000');
-  const [wallet, setWallet] = useState('2000');
-  const [bank, setBank] = useState('8000');
-  const [upi, setUpi] = useState('1500');
-  const [cardLimit, setCardLimit] = useState('50000');
+  const [savingsGoal, setSavingsGoal] = useState('');
+  const [wallet, setWallet] = useState('');
+  const [bank, setBank] = useState('');
+  const [upi, setUpi] = useState('');
+  const [cardLimit, setCardLimit] = useState('');
   const [currency, setCurrency] = useState('₹');
 
   const walletVal = parseFloat(wallet) || 0;
@@ -32,15 +32,15 @@ export function SetupWizard() {
     setupUser(
       {
         name: 'User',
-        monthlyIncome: parseFloat(income) || 40000,
+        monthlyIncome: parseFloat(income) || 0,
         salaryDate: parseInt(salaryDate, 10) || 1,
-        savingsGoal: parseFloat(savingsGoal) || 10000,
+        savingsGoal: parseFloat(savingsGoal) || 0,
         currency: currency || '₹',
       },
       walletVal,
       bankVal,
       upiVal,
-      parseFloat(cardLimit) || 50000
+      parseFloat(cardLimit) || 0
     );
   };
 

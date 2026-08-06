@@ -52,6 +52,47 @@ export type Database = {
           },
         ]
       }
+      bills: {
+        Row: {
+          amount: number
+          created_at: string | null
+          due_date: string
+          id: string
+          recurring: boolean | null
+          status: string
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          due_date: string
+          id?: string
+          recurring?: boolean | null
+          status: string
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          due_date?: string
+          id?: string
+          recurring?: boolean | null
+          status?: string
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bills_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budgets: {
         Row: {
           category: string
@@ -134,6 +175,47 @@ export type Database = {
           },
           {
             foreignKeyName: "expenses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      goals: {
+        Row: {
+          created_at: string | null
+          icon: string | null
+          id: string
+          saved_amount: number
+          target_amount: number
+          target_date: string | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          saved_amount: number
+          target_amount: number
+          target_date?: string | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          saved_amount?: number
+          target_amount?: number
+          target_date?: string | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "goals_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -289,6 +371,122 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "savings_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          completed: boolean | null
+          created_at: string | null
+          description: string | null
+          due_date: string
+          id: string
+          priority: string
+          reminder_date: string | null
+          section: string
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          completed?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          priority: string
+          reminder_date?: string | null
+          section: string
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          completed?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          priority?: string
+          reminder_date?: string | null
+          section?: string
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          account_id: string | null
+          amount: number
+          attachment: string | null
+          category: string
+          created_at: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          payment_method: string
+          recurring: boolean | null
+          sub_category: string | null
+          title: string
+          transaction_date: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          attachment?: string | null
+          category: string
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          payment_method: string
+          recurring?: boolean | null
+          sub_category?: string | null
+          title: string
+          transaction_date: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          attachment?: string | null
+          category?: string
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          payment_method?: string
+          recurring?: boolean | null
+          sub_category?: string | null
+          title?: string
+          transaction_date?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"

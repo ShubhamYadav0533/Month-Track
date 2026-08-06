@@ -20,11 +20,16 @@ export function MonthlyPlannerScreen() {
   const { profile, transactions, tasks, bills } = useFinanceStore();
   const [selectedDay, setSelectedDay] = useState<number>(new Date().getDate());
 
-  // August 2026 calendar days simulation
-  const daysInMonth = 31;
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonthNum = (now.getMonth() + 1).toString().padStart(2, '0');
+  const monthName = now.toLocaleString('default', { month: 'long' });
+  const yearMonthPrefix = `${currentYear}-${currentMonthNum}`;
+
+  const daysInMonth = new Date(currentYear, now.getMonth() + 1, 0).getDate();
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
-  const selectedDateStr = `2026-08-${selectedDay.toString().padStart(2, '0')}`;
+  const selectedDateStr = `${yearMonthPrefix}-${selectedDay.toString().padStart(2, '0')}`;
 
   // Filter items for selected day
   const dayTransactions = transactions.filter((t) => t.transactionDate === selectedDateStr);
@@ -46,7 +51,7 @@ export function MonthlyPlannerScreen() {
           <Text style={styles.title}>Monthly Planner</Text>
           <View style={styles.monthPill}>
             <CalendarIcon size={14} color="#10b981" />
-            <Text style={styles.monthText}>August 2026</Text>
+            <Text style={styles.monthText}>{monthName} {currentYear}</Text>
           </View>
         </View>
         <Text style={styles.subtitle}>Calendar schedule of your expenses, income, bills, and tasks</Text>
@@ -64,7 +69,7 @@ export function MonthlyPlannerScreen() {
 
         <View style={styles.daysGrid}>
           {daysArray.map((day) => {
-            const dateStr = `2026-08-${day.toString().padStart(2, '0')}`;
+            const dateStr = `${yearMonthPrefix}-${day.toString().padStart(2, '0')}`;
             const hasExp = transactions.some((t) => t.transactionDate === dateStr);
             const hasBill = bills.some((b) => b.dueDate === dateStr);
             const isSelected = selectedDay === day;

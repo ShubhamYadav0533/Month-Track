@@ -95,46 +95,25 @@ interface FinanceState {
 
 const DEFAULT_PROFILE: UserProfile = {
   id: 'user_1',
-  name: 'Shubham',
-  monthlyIncome: 65000,
+  name: 'User',
+  monthlyIncome: 0,
   salaryDate: 1,
-  savingsGoal: 20000,
+  savingsGoal: 0,
   currency: '₹',
-  isSetupComplete: true,
+  isSetupComplete: false,
 };
 
 const INITIAL_ACCOUNTS: Account[] = [
-  { id: 'acc_wallet', name: 'Wallet Cash', type: 'wallet', balance: 3500, icon: 'wallet', color: '#10b981' },
-  { id: 'acc_bank', name: 'HDFC Bank', type: 'bank', balance: 48200, icon: 'building', color: '#3b82f6' },
-  { id: 'acc_upi', name: 'GPay / UPI', type: 'upi', balance: 12500, icon: 'smartphone', color: '#8b5cf6' },
-  { id: 'acc_card', name: 'ICICI Card', type: 'card', balance: 0, creditLimit: 100000, icon: 'credit-card', color: '#f59e0b' },
+  { id: 'acc_wallet', name: 'Wallet Cash', type: 'wallet', balance: 0, icon: 'wallet', color: '#10b981' },
+  { id: 'acc_bank', name: 'Bank Balance', type: 'bank', balance: 0, icon: 'building', color: '#3b82f6' },
+  { id: 'acc_upi', name: 'UPI / GPay', type: 'upi', balance: 0, icon: 'smartphone', color: '#8b5cf6' },
+  { id: 'acc_card', name: 'Credit Card', type: 'card', balance: 0, creditLimit: 0, icon: 'credit-card', color: '#f59e0b' },
 ];
 
-const INITIAL_TASKS: TaskItem[] = [
-  { id: 'task_1', title: 'Pay Electricity Bill', description: 'Due on 8th Aug', dueDate: getFormattedDate(), priority: 'High', section: 'Today', completed: false, createdAt: new Date().toISOString() },
-  { id: 'task_2', title: 'Pay Rent', description: 'Monthly house rent', dueDate: getFormattedDate(), priority: 'High', section: 'Today', completed: true, createdAt: new Date().toISOString() },
-  { id: 'task_3', title: 'Add Fuel Expense', description: 'Weekly car fuel', dueDate: getFormattedDate(), priority: 'Medium', section: 'Today', completed: false, createdAt: new Date().toISOString() },
-  { id: 'task_4', title: 'Update Salary Record', description: 'Check bank statement', dueDate: getFormattedDate(), priority: 'Low', section: 'Upcoming', completed: false, createdAt: new Date().toISOString() },
-  { id: 'task_5', title: 'Buy Groceries', description: 'Fruits and vegetables', dueDate: getFormattedDate(), priority: 'Medium', section: 'Today', completed: false, createdAt: new Date().toISOString() },
-];
-
-const INITIAL_BILLS: BillItem[] = [
-  { id: 'bill_1', title: 'House Rent', amount: 12000, dueDate: '2026-08-05', recurring: true, status: 'Paid', category: 'Rent', accountId: 'acc_bank', createdAt: new Date().toISOString() },
-  { id: 'bill_2', title: 'Electricity Bill', amount: 1600, dueDate: '2026-08-08', recurring: true, status: 'Pending', category: 'Electricity', accountId: 'acc_upi', createdAt: new Date().toISOString() },
-  { id: 'bill_3', title: 'Airtel Broadband', amount: 999, dueDate: '2026-08-15', recurring: true, status: 'Pending', category: 'Internet', accountId: 'acc_upi', createdAt: new Date().toISOString() },
-];
-
-const INITIAL_GOALS: SavingsGoal[] = [
-  { id: 'goal_1', title: 'Emergency Fund', targetAmount: 200000, savedAmount: 58000, targetDate: '2026-12-31', icon: 'shield', category: 'Emergency' },
-  { id: 'goal_2', title: 'Vacation Trip', targetAmount: 60000, savedAmount: 25000, targetDate: '2026-11-15', icon: 'plane', category: 'Travel' },
-  { id: 'goal_3', title: 'New Laptop', targetAmount: 90000, savedAmount: 45000, targetDate: '2026-10-01', icon: 'laptop', category: 'Gadgets' },
-];
-
-const INITIAL_TRANSACTIONS: Transaction[] = [
-  { id: 'tx_1', title: 'Pizza & Drinks', description: 'Pizza & Drinks', amount: 350, type: 'Expense', category: 'Food', accountId: 'acc_upi', paymentMethod: 'UPI', transactionDate: getFormattedDate(), expenseDate: getFormattedDate(), createdAt: new Date().toISOString() },
-  { id: 'tx_2', title: 'Monthly Salary', description: 'Monthly Salary', amount: 65000, type: 'Income', category: 'Salary', accountId: 'acc_bank', paymentMethod: 'Bank', transactionDate: '2026-08-01', expenseDate: '2026-08-01', createdAt: new Date().toISOString() },
-  { id: 'tx_3', title: 'Petrol Refill', description: 'Petrol Refill', amount: 1500, type: 'Expense', category: 'Fuel', accountId: 'acc_card', paymentMethod: 'Credit Card', transactionDate: '2026-08-04', expenseDate: '2026-08-04', createdAt: new Date().toISOString() },
-];
+const INITIAL_TASKS: TaskItem[] = [];
+const INITIAL_BILLS: BillItem[] = [];
+const INITIAL_GOALS: SavingsGoal[] = [];
+const INITIAL_TRANSACTIONS: Transaction[] = [];
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
@@ -143,13 +122,7 @@ export const useFinanceStore = create<FinanceState>()(
       accounts: INITIAL_ACCOUNTS,
       transactions: INITIAL_TRANSACTIONS,
       expenses: INITIAL_TRANSACTIONS,
-      budgets: [
-        { category: 'Food', monthlyLimit: 5000 },
-        { category: 'Fuel', monthlyLimit: 3000 },
-        { category: 'Shopping', monthlyLimit: 4000 },
-        { category: 'Travel', monthlyLimit: 6000 },
-        { category: 'Medical', monthlyLimit: 2000 },
-      ],
+      budgets: [],
       savingsGoals: INITIAL_GOALS,
       tasks: INITIAL_TASKS,
       bills: INITIAL_BILLS,
@@ -187,14 +160,14 @@ export const useFinanceStore = create<FinanceState>()(
               profile: {
                 id: res.profile.id,
                 name: res.profile.name || state.profile.name,
-                monthlyIncome: parseFloat(res.profile.monthly_income || '65000'),
+                monthlyIncome: parseFloat(res.profile.monthly_income || '0'),
                 salaryDate: parseInt(res.profile.salary_date || '1', 10),
-                savingsGoal: parseFloat(res.profile.savings_goal || '20000'),
+                savingsGoal: parseFloat(res.profile.savings_goal || '0'),
                 currency: res.profile.currency || '₹',
                 isSetupComplete: true,
               },
-              transactions: fetchedTxs.length > 0 ? fetchedTxs : state.transactions,
-              expenses: fetchedTxs.length > 0 ? fetchedTxs : state.expenses,
+              transactions: fetchedTxs,
+              expenses: fetchedTxs,
               accounts: res.accounts.length > 0
                 ? res.accounts.map((a: any) => ({
                     id: a.id,
@@ -206,8 +179,8 @@ export const useFinanceStore = create<FinanceState>()(
                     color: a.type === 'wallet' ? '#10b981' : a.type === 'bank' ? '#3b82f6' : a.type === 'upi' ? '#8b5cf6' : '#f59e0b',
                   }))
                 : state.accounts,
-              budgets: res.budgets || state.budgets,
-              savingsGoals: res.goals || state.savingsGoals,
+              budgets: res.budgets || [],
+              savingsGoals: res.goals || [],
               isLoading: false,
             };
           });
@@ -532,7 +505,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
     }),
     {
-      name: 'finance-app-os-storage',
+      name: 'finance-app-os-clean-v5',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

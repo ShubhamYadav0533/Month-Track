@@ -241,25 +241,31 @@ export function LiveDashboard() {
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
         </View>
         <View style={styles.recentList}>
-          {transactions.slice(0, 5).map((tx) => {
-            const isInc = tx.type === 'Income' || tx.type === 'Borrow';
-            return (
-              <View key={tx.id} style={styles.recentRow}>
-                <View style={styles.recentLeft}>
-                  <View style={[styles.iconCircle, { backgroundColor: isInc ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}>
-                    {isInc ? <ArrowDownLeft size={16} color="#10b981" /> : <ArrowUpRight size={16} color="#ef4444" />}
+          {transactions.length === 0 ? (
+            <Text style={{ color: '#64748b', fontSize: 12, paddingVertical: 10, textAlign: 'center' }}>
+              No transactions recorded yet. Tap quick buttons above to add one.
+            </Text>
+          ) : (
+            transactions.slice(0, 5).map((tx) => {
+              const isInc = tx.type === 'Income' || tx.type === 'Borrow';
+              return (
+                <View key={tx.id} style={styles.recentRow}>
+                  <View style={styles.recentLeft}>
+                    <View style={[styles.iconCircle, { backgroundColor: isInc ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}>
+                      {isInc ? <ArrowDownLeft size={16} color="#10b981" /> : <ArrowUpRight size={16} color="#ef4444" />}
+                    </View>
+                    <View>
+                      <Text style={styles.txTitle}>{tx.title}</Text>
+                      <Text style={styles.txMeta}>{tx.transactionDate} • {tx.category}</Text>
+                    </View>
                   </View>
-                  <View>
-                    <Text style={styles.txTitle}>{tx.title}</Text>
-                    <Text style={styles.txMeta}>{tx.transactionDate} • {tx.category}</Text>
-                  </View>
+                  <Text style={[styles.txAmount, { color: isInc ? '#10b981' : '#f8fafc' }]}>
+                    {isInc ? '+' : '-'}{profile.currency}{tx.amount}
+                  </Text>
                 </View>
-                <Text style={[styles.txAmount, { color: isInc ? '#10b981' : '#f8fafc' }]}>
-                  {isInc ? '+' : '-'}{profile.currency}{tx.amount}
-                </Text>
-              </View>
-            );
-          })}
+              );
+            })
+          )}
         </View>
       </ScrollView>
 

@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { ExpenseCategory } from '../types';
+import { getFormattedDate } from '../utils/budgetCalculator';
 import {
   CreditCard,
   Plus,
@@ -51,7 +52,7 @@ export function BillsEMIScreen() {
   // New Bill form
   const [billTitle, setBillTitle] = useState('');
   const [billAmount, setBillAmount] = useState('');
-  const [billDueDate, setBillDueDate] = useState('2026-08-15');
+  const [billDueDate, setBillDueDate] = useState(getFormattedDate());
 
   // Budget modal states
   const [budCat, setBudCat] = useState<ExpenseCategory>('Food');
