@@ -240,6 +240,104 @@ export type Database = {
           },
         ]
       }
+      calendar_events: {
+        Row: {
+          all_day: boolean | null
+          color: string | null
+          created_at: string | null
+          end_datetime: string
+          event_type: string | null
+          id: string
+          location: string | null
+          notes: string | null
+          start_datetime: string
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          all_day?: boolean | null
+          color?: string | null
+          created_at?: string | null
+          end_datetime: string
+          event_type?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          start_datetime: string
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          all_day?: boolean | null
+          color?: string | null
+          created_at?: string | null
+          end_datetime?: string
+          event_type?: string | null
+          id?: string
+          location?: string | null
+          notes?: string | null
+          start_datetime?: string
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_planner: {
+        Row: {
+          activity: string
+          completed: boolean | null
+          created_at: string | null
+          id: string
+          planner_date: string
+          task_id: string | null
+          time_slot: string
+          user_id: string | null
+        }
+        Insert: {
+          activity: string
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          planner_date: string
+          task_id?: string | null
+          time_slot: string
+          user_id?: string | null
+        }
+        Update: {
+          activity?: string
+          completed?: boolean | null
+          created_at?: string | null
+          id?: string
+          planner_date?: string
+          task_id?: string | null
+          time_slot?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_planner_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_planner_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           created_at: string | null
@@ -391,6 +489,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      habits: {
+        Row: {
+          best_streak: number | null
+          color: string | null
+          completed_days: Json | null
+          created_at: string | null
+          current_streak: number | null
+          goal_type: string | null
+          icon: string | null
+          id: string
+          target_value: number | null
+          title: string
+          user_id: string | null
+        }
+        Insert: {
+          best_streak?: number | null
+          color?: string | null
+          completed_days?: Json | null
+          created_at?: string | null
+          current_streak?: number | null
+          goal_type?: string | null
+          icon?: string | null
+          id?: string
+          target_value?: number | null
+          title: string
+          user_id?: string | null
+        }
+        Update: {
+          best_streak?: number | null
+          color?: string | null
+          completed_days?: Json | null
+          created_at?: string | null
+          current_streak?: number | null
+          goal_type?: string | null
+          icon?: string | null
+          id?: string
+          target_value?: number | null
+          title?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "habits_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -609,6 +757,66 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "recurring_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reminders: {
+        Row: {
+          created_at: string | null
+          enabled: boolean | null
+          id: string
+          notification_type: string | null
+          repeat_interval: number | null
+          repeat_type: string | null
+          snooze_minutes: number | null
+          sound: string | null
+          task_id: string | null
+          trigger_time: string
+          user_id: string | null
+          vibration: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          notification_type?: string | null
+          repeat_interval?: number | null
+          repeat_type?: string | null
+          snooze_minutes?: number | null
+          sound?: string | null
+          task_id?: string | null
+          trigger_time: string
+          user_id?: string | null
+          vibration?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          enabled?: boolean | null
+          id?: string
+          notification_type?: string | null
+          repeat_interval?: number | null
+          repeat_type?: string | null
+          snooze_minutes?: number | null
+          sound?: string | null
+          task_id?: string | null
+          trigger_time?: string
+          user_id?: string | null
+          vibration?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminders_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminders_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
