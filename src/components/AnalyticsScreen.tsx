@@ -8,255 +8,134 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { ExpenseCategory } from '../types';
-import { BarChart3, PieChart as PieIcon, AlertTriangle, Sparkles } from 'lucide-react-native';
+import { PieChart as PieIcon, Sparkles, TrendingUp, TrendingDown, Layers } from 'lucide-react-native';
 
 export function AnalyticsScreen() {
-  const { profile, expenses, budgets } = useFinanceStore();
-  const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const { profile, transactions } = useFinanceStore();
+  const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>('monthly');
 
-  // Real Daily Chart Calculation (Sun - Sat) strictly from user's recorded database expenses
-  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dailyData = daysOfWeek.map((dayName, idx) => {
-    const totalForDay = expenses
-      .filter((e) => new Date(e.expenseDate).getDay() === idx)
-      .reduce((sum, e) => sum + e.amount, 0);
+  // Expenses only
+  const expenses = transactions.filter((t) => t.type !== 'Income' && t.type !== 'Borrow');
+  const incomeList = transactions.filter((t) => t.type === 'Income' || t.type === 'Borrow');
 
-    return {
-      day: dayName,
-      amount: totalForDay,
-    };
+  const totalExpenseAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const totalIncomeAmount = incomeList.reduce((sum, i) => sum + i.amount, 0);
+  const netCashFlow = totalIncomeAmount - totalExpenseAmount;
+
+  // Real Category Breakdown
+  const categoryTotals: Record<string, number> = {};
+  expenses.forEach((e) => {
+    categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
 
-  const maxDaily = Math.max(...dailyData.map((d) => d.amount), 1);
-  const totalDailyLogged = dailyData.reduce((sum, d) => sum + d.amount, 0);
+  const sortedCategories = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1]);
 
-  // Real Category Breakdown calculation
-  const categoryTotals: Record<ExpenseCategory, number> = {
-    Food: 0,
-    Fuel: 0,
-    Shopping: 0,
-    Medical: 0,
-    Recharge: 0,
-    Travel: 0,
-    Entertainment: 0,
-    Rent: 0,
-    Bills: 0,
-    Others: 0,
-  };
+  const topCategoryName = sortedCategories[0] ? sortedCategories[0][0] : 'None';
+  const topCategoryAmount = sortedCategories[0] ? sortedCategories[0][1] : 0;
 
-  expenses.forEach((exp) => {
-    categoryTotals[exp.category] = (categoryTotals[exp.category] || 0) + exp.amount;
-  });
-
-  const grandTotalSpent = Object.values(categoryTotals).reduce((a, b) => a + b, 0);
-
-  const categoryColors: Record<ExpenseCategory, string> = {
-    Food: '#f59e0b',
-    Fuel: '#ef4444',
-    Shopping: '#ec4899',
-    Medical: '#10b981',
-    Recharge: '#3b82f6',
-    Travel: '#8b5cf6',
-    Entertainment: '#6366f1',
-    Rent: '#14b8a6',
-    Bills: '#f97316',
-    Others: '#64748b',
-  };
-
-  const monthlySpent = grandTotalSpent;
-  const monthlySaved = Math.max(0, profile.monthlyIncome - monthlySpent);
+  // Highest Expense Item
+  const highestExpenseItem = [...expenses].sort((a, b) => b.amount - a.amount)[0];
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Real-Time Analytics</Text>
-          <Text style={styles.subtitle}>Daily spending trends, category graphs & database stats</Text>
-        </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Excel Reports & Analytics</Text>
+        <Text style={styles.subtitle}>Automated charts, cash flow, and spending breakdown</Text>
+      </View>
 
-        {/* Tab Toggle */}
-        <View style={styles.tabContainer}>
-          {(['daily', 'weekly', 'monthly'] as const).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tabButton, activeTab === tab && styles.tabButtonActive]}
-              onPress={() => setActiveTab(tab)}
-            >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Real Daily Spending Chart Graph */}
-        {activeTab === 'daily' && (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <BarChart3 size={20} color="#10b981" />
-              <Text style={styles.cardTitle}>Daily Spending Graph (Live DB)</Text>
-            </View>
-
-            {totalDailyLogged === 0 ? (
-              <View style={styles.emptyState}>
-                <Sparkles size={28} color="#10b981" />
-                <Text style={styles.emptyTitle}>No Expenses Logged Yet</Text>
-                <Text style={styles.emptyDesc}>
-                  Add your first expense on the dashboard to visualize real-time daily spending bars!
-                </Text>
-              </View>
-            ) : (
-              <View style={styles.chartContainer}>
-                {dailyData.map((item) => {
-                  const heightPct = item.amount > 0 ? Math.round((item.amount / maxDaily) * 100) : 0;
-                  return (
-                    <View key={item.day} style={styles.barColumn}>
-                      <Text style={styles.barAmountText}>
-                        {item.amount > 0 ? `${profile.currency}${item.amount}` : ''}
-                      </Text>
-                      <View style={styles.barTrack}>
-                        <View
-                          style={[
-                            styles.barFill,
-                            { height: `${Math.max(item.amount > 0 ? 8 : 0, heightPct)}%` },
-                          ]}
-                        />
-                      </View>
-                      <Text style={styles.barDayText}>{item.day}</Text>
-                    </View>
-                  );
-                })}
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Monthly Summary */}
-        {activeTab === 'monthly' && (
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Monthly Financial Summary</Text>
-            <View style={styles.monthlyRow}>
-              <View style={styles.monthlyMetric}>
-                <Text style={styles.monthlyLabel}>Monthly Income</Text>
-                <Text style={styles.incomeText}>
-                  {profile.currency}{profile.monthlyIncome.toLocaleString()}
-                </Text>
-              </View>
-              <View style={styles.monthlyMetric}>
-                <Text style={styles.monthlyLabel}>Total Spent</Text>
-                <Text style={styles.spentText}>
-                  {profile.currency}{monthlySpent.toLocaleString()}
-                </Text>
-              </View>
-              <View style={styles.monthlyMetric}>
-                <Text style={styles.monthlyLabel}>Saved</Text>
-                <Text style={styles.savedText}>
-                  {profile.currency}{monthlySaved.toLocaleString()}
-                </Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Category Pie Chart Breakdown */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <PieIcon size={20} color="#8b5cf6" />
-            <Text style={styles.cardTitle}>Category Breakdown Graph</Text>
-          </View>
-
-          {grandTotalSpent === 0 ? (
-            <Text style={styles.emptyDescText}>
-              Log expenses across categories (Food, Fuel, Shopping, Bills) to generate pie chart breakdown.
+      {/* Period Tabs */}
+      <View style={styles.periodTabs}>
+        {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((period) => (
+          <TouchableOpacity
+            key={period}
+            style={[styles.tab, activeTab === period && styles.tabActive]}
+            onPress={() => setActiveTab(period)}
+          >
+            <Text style={[styles.tabText, activeTab === period && styles.tabTextActive]}>
+              {period.toUpperCase()}
             </Text>
-          ) : (
-            <>
-              {/* Visual Segment Bar */}
-              <View style={styles.pieBarTrack}>
-                {Object.entries(categoryTotals)
-                  .filter(([_, amt]) => amt > 0)
-                  .map(([cat, amt]) => {
-                    const pct = grandTotalSpent > 0 ? (amt / grandTotalSpent) * 100 : 0;
-                    return (
-                      <View
-                        key={cat}
-                        style={[
-                          styles.pieBarSegment,
-                          {
-                            width: `${pct}%`,
-                            backgroundColor: categoryColors[cat as ExpenseCategory] || '#64748b',
-                          },
-                        ]}
-                      />
-                    );
-                  })}
-              </View>
+          </TouchableOpacity>
+        ))}
+      </View>
 
-              {/* Category Percentage Legend */}
-              <View style={styles.legendGrid}>
-                {Object.entries(categoryTotals)
-                  .filter(([_, amt]) => amt > 0)
-                  .map(([cat, amt]) => {
-                    const pct = grandTotalSpent > 0 ? Math.round((amt / grandTotalSpent) * 100) : 0;
-                    return (
-                      <View key={cat} style={styles.legendItem}>
-                        <View
-                          style={[
-                            styles.legendDot,
-                            { backgroundColor: categoryColors[cat as ExpenseCategory] },
-                          ]}
-                        />
-                        <Text style={styles.legendName}>{cat}</Text>
-                        <Text style={styles.legendValue}>
-                          {profile.currency}{amt} ({pct}%)
-                        </Text>
-                      </View>
-                    );
-                  })}
-              </View>
-            </>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* KPI Cash Flow Summary */}
+        <View style={styles.kpiRow}>
+          <View style={styles.kpiCard}>
+            <TrendingUp size={16} color="#10b981" />
+            <Text style={styles.kpiLabel}>Total Income</Text>
+            <Text style={[styles.kpiVal, { color: '#10b981' }]}>
+              {profile.currency}{totalIncomeAmount.toLocaleString()}
+            </Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <TrendingDown size={16} color="#ef4444" />
+            <Text style={styles.kpiLabel}>Total Expenses</Text>
+            <Text style={[styles.kpiVal, { color: '#ef4444' }]}>
+              {profile.currency}{totalExpenseAmount.toLocaleString()}
+            </Text>
+          </View>
+
+          <View style={styles.kpiCard}>
+            <Layers size={16} color="#3b82f6" />
+            <Text style={styles.kpiLabel}>Net Cash Flow</Text>
+            <Text style={[styles.kpiVal, { color: netCashFlow >= 0 ? '#3b82f6' : '#ef4444' }]}>
+              {netCashFlow >= 0 ? '+' : ''}{profile.currency}{netCashFlow.toLocaleString()}
+            </Text>
+          </View>
+        </View>
+
+        {/* Highlights & Top Category */}
+        <View style={styles.highlightCard}>
+          <View style={styles.hlHeader}>
+            <Sparkles size={16} color="#10b981" />
+            <Text style={styles.hlTitle}>Key Financial Insights</Text>
+          </View>
+
+          <View style={styles.hlRow}>
+            <Text style={styles.hlLabel}>Top Category:</Text>
+            <Text style={styles.hlVal}>{topCategoryName} ({profile.currency}{topCategoryAmount})</Text>
+          </View>
+
+          {highestExpenseItem && (
+            <View style={styles.hlRow}>
+              <Text style={styles.hlLabel}>Highest Single Expense:</Text>
+              <Text style={styles.hlVal}>{highestExpenseItem.title} ({profile.currency}{highestExpenseItem.amount})</Text>
+            </View>
           )}
         </View>
 
-        {/* Category Budget Limits */}
-        <Text style={styles.sectionTitle}>Category Limits & Alerts</Text>
-        {budgets.map((b) => {
-          const spent = categoryTotals[b.category] || 0;
-          const isExceeded = spent > b.monthlyLimit;
-          const pct = Math.min(100, Math.round((spent / Math.max(1, b.monthlyLimit)) * 100));
+        {/* Expenses by Category Breakdown */}
+        <View style={styles.chartCard}>
+          <View style={styles.chartCardHeader}>
+            <PieIcon size={18} color="#10b981" />
+            <Text style={styles.chartCardTitle}>Expenses by Category</Text>
+          </View>
 
-          return (
-            <View key={b.category} style={styles.budgetCard}>
-              <View style={styles.budgetHeader}>
-                <View style={styles.budgetLeft}>
-                  <Text style={styles.budgetName}>{b.category}</Text>
-                  {isExceeded && (
-                    <View style={styles.warningTag}>
-                      <AlertTriangle size={12} color="#ef4444" />
-                      <Text style={styles.warningTagText}>Limit Exceeded</Text>
-                    </View>
-                  )}
+          {sortedCategories.length === 0 ? (
+            <Text style={styles.emptyText}>No category expenses recorded yet.</Text>
+          ) : (
+            sortedCategories.map(([cat, amt]) => {
+              const pct = totalExpenseAmount > 0 ? Math.round((amt / totalExpenseAmount) * 100) : 0;
+              return (
+                <View key={cat} style={styles.catRow}>
+                  <View style={styles.catInfo}>
+                    <Text style={styles.catName}>{cat}</Text>
+                    <Text style={styles.catAmt}>
+                      {profile.currency}{amt.toLocaleString()} ({pct}%)
+                    </Text>
+                  </View>
+                  <View style={styles.barBg}>
+                    <View style={[styles.barFill, { width: `${pct}%` }]} />
+                  </View>
                 </View>
-                <Text style={styles.budgetMeta}>
-                  {profile.currency}{spent} / {profile.currency}{b.monthlyLimit}
-                </Text>
-              </View>
-
-              <View style={styles.budgetTrack}>
-                <View
-                  style={[
-                    styles.budgetFill,
-                    {
-                      width: `${pct}%`,
-                      backgroundColor: isExceeded ? '#ef4444' : categoryColors[b.category] || '#10b981',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-          );
-        })}
+              );
+            })
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -267,243 +146,155 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f172a',
   },
-  scrollContent: {
-    padding: 18,
-    paddingBottom: 40,
-  },
   header: {
-    marginBottom: 20,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 10,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#ffffff',
+    color: '#f8fafc',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94a3b8',
+    marginTop: 4,
   },
-  tabContainer: {
+  periodTabs: {
     flexDirection: 'row',
-    backgroundColor: '#1e293b',
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 20,
+    paddingHorizontal: 18,
+    marginVertical: 10,
+    gap: 8,
   },
-  tabButton: {
+  tab: {
     flex: 1,
-    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 10,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
   },
-  tabButtonActive: {
+  tabActive: {
     backgroundColor: '#10b981',
+    borderColor: '#10b981',
   },
   tabText: {
-    color: '#94a3b8',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
+    color: '#94a3b8',
   },
   tabTextActive: {
     color: '#ffffff',
   },
-  card: {
+  scrollContent: {
+    paddingHorizontal: 18,
+    paddingBottom: 40,
+    gap: 14,
+  },
+  kpiRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  kpiCard: {
+    flex: 1,
     backgroundColor: '#1e293b',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 20,
+    padding: 12,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#334155',
   },
-  cardHeader: {
+  kpiLabel: {
+    fontSize: 10,
+    color: '#94a3b8',
+    marginTop: 4,
+  },
+  kpiVal: {
+    fontSize: 14,
+    fontWeight: '800',
+    marginTop: 2,
+  },
+  highlightCard: {
+    backgroundColor: '#1e293b',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  hlHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 10,
   },
-  cardTitle: {
-    fontSize: 16,
+  hlTitle: {
+    fontSize: 14,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#f8fafc',
   },
-  emptyState: {
-    paddingVertical: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  emptyDesc: {
-    fontSize: 12,
-    color: '#94a3b8',
-    textAlign: 'center',
-    paddingHorizontal: 16,
-  },
-  emptyDescText: {
-    fontSize: 13,
-    color: '#94a3b8',
-    paddingVertical: 10,
-  },
-  chartContainer: {
+  hlRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    height: 160,
-    paddingTop: 20,
+    paddingVertical: 4,
   },
-  barColumn: {
+  hlLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  hlVal: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#10b981',
+  },
+  chartCard: {
+    backgroundColor: '#1e293b',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  chartCardHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    height: '100%',
-    justifyContent: 'flex-end',
+    gap: 8,
+    marginBottom: 14,
   },
-  barAmountText: {
-    fontSize: 10,
-    color: '#cbd5e1',
-    fontWeight: '600',
+  chartCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#f8fafc',
+  },
+  emptyText: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  catRow: {
+    marginBottom: 12,
+  },
+  catInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 4,
   },
-  barTrack: {
-    width: 24,
-    height: '75%',
+  catName: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#f8fafc',
+  },
+  catAmt: {
+    fontSize: 12,
+    color: '#94a3b8',
+  },
+  barBg: {
+    height: 8,
     backgroundColor: '#0f172a',
-    borderRadius: 8,
-    justifyContent: 'flex-end',
+    borderRadius: 4,
     overflow: 'hidden',
   },
   barFill: {
+    height: '100%',
     backgroundColor: '#10b981',
-    borderRadius: 8,
-  },
-  barDayText: {
-    fontSize: 11,
-    color: '#64748b',
-    marginTop: 6,
-    fontWeight: '600',
-  },
-  monthlyRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 12,
-  },
-  monthlyMetric: {
-    alignItems: 'center',
-  },
-  monthlyLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
-    marginBottom: 4,
-  },
-  incomeText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#3b82f6',
-  },
-  spentText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#ef4444',
-  },
-  savedText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#10b981',
-  },
-  pieBarTrack: {
-    height: 16,
-    borderRadius: 8,
-    flexDirection: 'row',
-    overflow: 'hidden',
-    marginBottom: 16,
-    backgroundColor: '#0f172a',
-  },
-  pieBarSegment: {
-    height: '100%',
-  },
-  legendGrid: {
-    gap: 8,
-  },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  legendDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  legendName: {
-    flex: 1,
-    color: '#cbd5e1',
-    fontSize: 13,
-  },
-  legendValue: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 14,
-  },
-  budgetCard: {
-    backgroundColor: '#1e293b',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-  budgetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  budgetLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  budgetName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  warningTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  warningTagText: {
-    color: '#ef4444',
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  budgetMeta: {
-    fontSize: 12,
-    color: '#cbd5e1',
-    fontWeight: '600',
-  },
-  budgetTrack: {
-    height: 6,
-    backgroundColor: '#0f172a',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  budgetFill: {
-    height: '100%',
-    borderRadius: 3,
+    borderRadius: 4,
   },
 });

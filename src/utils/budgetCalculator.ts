@@ -53,14 +53,14 @@ export function calculateDailyBudgetStats(
 
   // 4. Calculate Spent Today
   const todayStr = getFormattedDate();
-  const todayExpenses = expenses.filter(e => e.expenseDate === todayStr);
+  const todayExpenses = expenses.filter(e => (e.expenseDate || e.transactionDate) === todayStr);
   const spentToday = todayExpenses.reduce((acc, curr) => acc + curr.amount, 0);
 
   // 5. Calculate Yesterday's Budget vs Spent for Carry Forward Math
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
   const yesterdayStr = getFormattedDate(yesterday);
-  const yesterdayExpenses = expenses.filter(e => e.expenseDate === yesterdayStr);
+  const yesterdayExpenses = expenses.filter(e => (e.expenseDate || e.transactionDate) === yesterdayStr);
   const spentYesterday = yesterdayExpenses.reduce((acc, curr) => acc + curr.amount, 0);
 
   // Yesterday Carry Forward Difference (SafeDaily - SpentYesterday)
@@ -71,7 +71,7 @@ export function calculateDailyBudgetStats(
   // 6. Calculate Velocity (Average spend over last 7 days)
   const sevenDaysAgo = new Date();
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-  const recentExpenses = expenses.filter(e => new Date(e.expenseDate) >= sevenDaysAgo);
+  const recentExpenses = expenses.filter(e => new Date(e.expenseDate || e.transactionDate) >= sevenDaysAgo);
   const totalRecentSpent = recentExpenses.reduce((acc, curr) => acc + curr.amount, 0);
   const velocityPerDay = Math.round(totalRecentSpent / 7) || Math.round(spentToday);
 

@@ -38,6 +38,9 @@ export function AIInsightsScreen() {
     if (voiceQuery.toLowerCase().includes('bill') || voiceQuery.toLowerCase().includes('wifi')) category = 'Bills';
 
     addExpense({
+      title: `Voice Entry: ${voiceQuery}`,
+      type: 'Expense',
+      transactionDate: new Date().toISOString().split('T')[0],
       accountId: accounts.find(a => a.type === 'upi')?.id || accounts[0].id,
       amount,
       category: category as any,

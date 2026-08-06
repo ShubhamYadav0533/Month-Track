@@ -25,10 +25,32 @@ router.get('/accounts', async (req, res) => {
   }
 });
 
-// Expenses Routes
+// Expenses & Transactions Routes
 router.get('/expenses', getExpenses);
 router.post('/expenses', createExpense);
 router.delete('/expenses/:id', deleteExpense);
+
+// Tasks Routes (Microsoft To-Do)
+router.get('/tasks', async (req, res) => {
+  try {
+    const { data: tasks, error } = await supabase.from('tasks').select('*');
+    if (error) throw error;
+    res.json({ success: true, tasks });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Bills Routes
+router.get('/bills', async (req, res) => {
+  try {
+    const { data: bills, error } = await supabase.from('bills').select('*');
+    if (error) throw error;
+    res.json({ success: true, bills });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 // Budgets Routes
 router.get('/budgets', async (req, res) => {

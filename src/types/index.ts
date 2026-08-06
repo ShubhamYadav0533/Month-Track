@@ -1,16 +1,38 @@
 export type ExpenseCategory =
   | 'Food'
+  | 'Groceries'
   | 'Fuel'
-  | 'Shopping'
-  | 'Medical'
-  | 'Recharge'
-  | 'Travel'
-  | 'Entertainment'
   | 'Rent'
+  | 'Electricity'
+  | 'Gas'
+  | 'Internet'
+  | 'Shopping'
+  | 'Travel'
+  | 'Medical'
+  | 'Education'
+  | 'Salary'
+  | 'Business'
+  | 'Investment'
+  | 'Entertainment'
+  | 'Recharge'
+  | 'Insurance'
+  | 'EMI'
   | 'Bills'
+  | 'Emergency'
   | 'Others';
 
-export type AccountType = 'wallet' | 'bank' | 'upi' | 'card';
+export type TransactionType =
+  | 'Expense'
+  | 'Income'
+  | 'Transfer'
+  | 'Borrow'
+  | 'Lend'
+  | 'EMI'
+  | 'Investment';
+
+export type PaymentMethod = 'Wallet' | 'Bank' | 'UPI' | 'Credit Card' | 'Cash';
+
+export type AccountType = 'wallet' | 'bank' | 'upi' | 'card' | 'cash';
 
 export interface UserProfile {
   id: string;
@@ -34,23 +56,35 @@ export interface Account {
   color: string;
 }
 
-export interface Expense {
+export interface Transaction {
   id: string;
-  accountId: string;
+  title: string;
   amount: number;
+  type: TransactionType;
   category: ExpenseCategory;
-  description: string;
-  paymentMethod: string;
-  location?: string;
+  subCategory?: string;
+  accountId: string;
+  paymentMethod: PaymentMethod;
+  transactionDate: string; // YYYY-MM-DD
+  expenseDate?: string; // Optional backward compatibility alias
+  description?: string; // Optional backward compatibility alias
   receiptUrl?: string;
-  expenseDate: string; // YYYY-MM-DD
+  time?: string;
+  recurring?: boolean;
+  notes?: string;
+  attachment?: string;
+  location?: string;
+  tags?: string[];
   createdAt: string;
-  isRecurring?: boolean;
 }
+
+// Backward compatibility alias for Expense
+export type Expense = Transaction;
 
 export interface CategoryBudget {
   category: ExpenseCategory;
   monthlyLimit: number;
+  spent?: number;
 }
 
 export interface SavingsGoal {
@@ -60,6 +94,31 @@ export interface SavingsGoal {
   savedAmount: number;
   targetDate?: string;
   icon: string;
+  category?: string;
+}
+
+export interface TaskItem {
+  id: string;
+  title: string;
+  description?: string;
+  dueDate: string; // YYYY-MM-DD
+  priority: 'Low' | 'Medium' | 'High';
+  section: 'Today' | 'Upcoming' | 'Important' | 'Completed';
+  completed: boolean;
+  reminderDate?: string;
+  createdAt: string;
+}
+
+export interface BillItem {
+  id: string;
+  title: string;
+  amount: number;
+  dueDate: string; // YYYY-MM-DD
+  recurring: boolean;
+  status: 'Pending' | 'Paid';
+  category?: ExpenseCategory;
+  accountId?: string;
+  createdAt: string;
 }
 
 export interface RecurringTransaction {

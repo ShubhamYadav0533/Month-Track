@@ -4,9 +4,9 @@ export function exportExpensesToCSV(expenses: Expense[], currency: string = '₹
   const headers = ['ID', 'Date', 'Category', 'Description', 'Amount', 'Payment Method', 'Location'];
   const rows = expenses.map(e => [
     e.id,
-    e.expenseDate,
+    e.expenseDate || e.transactionDate,
     `"${e.category}"`,
-    `"${e.description.replace(/"/g, '""')}"`,
+    `"${(e.description || e.title || '').replace(/"/g, '""')}"`,
     `${e.amount}`,
     `"${e.paymentMethod}"`,
     `"${e.location || 'N/A'}"`,

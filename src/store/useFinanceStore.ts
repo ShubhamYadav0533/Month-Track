@@ -4,13 +4,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   UserProfile,
   Account,
-  Expense,
+  Transaction,
   CategoryBudget,
   SavingsGoal,
   RecurringTransaction,
   NotificationItem,
   SplitExpense,
   ExpenseCategory,
+  TaskItem,
+  BillItem,
+  TransactionType,
+  PaymentMethod,
 } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import {
@@ -26,9 +30,12 @@ import {
 interface FinanceState {
   profile: UserProfile;
   accounts: Account[];
-  expenses: Expense[];
+  transactions: Transaction[]; // Unified transaction history
+  expenses: Transaction[]; // Backward compatibility alias
   budgets: CategoryBudget[];
   savingsGoals: SavingsGoal[];
+  tasks: TaskItem[];
+  bills: BillItem[];
   recurring: RecurringTransaction[];
   notifications: NotificationItem[];
   splitExpenses: SplitExpense[];
@@ -45,16 +52,42 @@ interface FinanceState {
     cardLimit?: number
   ) => void;
   updateProfile: (data: Partial<UserProfile>) => void;
-  addExpense: (expense: Omit<Expense, 'id' | 'createdAt'>) => void;
-  deleteExpense: (id: string) => void;
+  
+  // Transaction Actions
+  addTransaction: (tx: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  addExpense: (expense: Omit<Transaction, 'id' | 'createdAt'>) => void; // alias
+  updateTransaction: (id: string, updatedData: Partial<Transaction>) => void;
+  deleteTransaction: (id: string) => void;
+  deleteExpense: (id: string) => void; // alias
+  duplicateTransaction: (id: string) => void;
+
+  // Tasks Actions
+  addTask: (task: Omit<TaskItem, 'id' | 'createdAt'>) => void;
+  toggleTaskCompleted: (id: string) => void;
+  deleteTask: (id: string) => void;
+  updateTask: (id: string, task: Partial<TaskItem>) => void;
+
+  // Bills Actions
+  addBill: (bill: Omit<BillItem, 'id' | 'createdAt'>) => void;
+  toggleBillStatus: (id: string) => void;
+  deleteBill: (id: string) => void;
+
+  // Account & Budget Actions
   updateAccountBalance: (accountId: string, newBalance: number) => void;
   setCategoryBudget: (category: ExpenseCategory, monthlyLimit: number) => void;
+  
+  // Savings Goal Actions
   addSavingsGoal: (goal: Omit<SavingsGoal, 'id'>) => void;
   updateSavedGoalAmount: (id: string, additionalAmount: number) => void;
+  deleteSavingsGoal: (id: string) => void;
+
+  // Recurring & Split Actions
   addRecurringTransaction: (rec: Omit<RecurringTransaction, 'id'>) => void;
   processRecurringDeductions: () => void;
   addSplitExpense: (split: Omit<SplitExpense, 'id' | 'createdAt'>) => void;
   settleSplitExpense: (id: string) => void;
+  
+  // Security
   unlockApp: (pin: string) => boolean;
   lockApp: () => void;
   resetAllData: () => void;
@@ -62,22 +95,64 @@ interface FinanceState {
 
 const DEFAULT_PROFILE: UserProfile = {
   id: 'user_1',
-  name: 'User',
-  monthlyIncome: 0,
+  name: 'Shubham',
+  monthlyIncome: 65000,
   salaryDate: 1,
-  savingsGoal: 0,
+  savingsGoal: 20000,
   currency: '₹',
-  isSetupComplete: false,
+  isSetupComplete: true,
 };
+
+const INITIAL_ACCOUNTS: Account[] = [
+  { id: 'acc_wallet', name: 'Wallet Cash', type: 'wallet', balance: 3500, icon: 'wallet', color: '#10b981' },
+  { id: 'acc_bank', name: 'HDFC Bank', type: 'bank', balance: 48200, icon: 'building', color: '#3b82f6' },
+  { id: 'acc_upi', name: 'GPay / UPI', type: 'upi', balance: 12500, icon: 'smartphone', color: '#8b5cf6' },
+  { id: 'acc_card', name: 'ICICI Card', type: 'card', balance: 0, creditLimit: 100000, icon: 'credit-card', color: '#f59e0b' },
+];
+
+const INITIAL_TASKS: TaskItem[] = [
+  { id: 'task_1', title: 'Pay Electricity Bill', description: 'Due on 8th Aug', dueDate: getFormattedDate(), priority: 'High', section: 'Today', completed: false, createdAt: new Date().toISOString() },
+  { id: 'task_2', title: 'Pay Rent', description: 'Monthly house rent', dueDate: getFormattedDate(), priority: 'High', section: 'Today', completed: true, createdAt: new Date().toISOString() },
+  { id: 'task_3', title: 'Add Fuel Expense', description: 'Weekly car fuel', dueDate: getFormattedDate(), priority: 'Medium', section: 'Today', completed: false, createdAt: new Date().toISOString() },
+  { id: 'task_4', title: 'Update Salary Record', description: 'Check bank statement', dueDate: getFormattedDate(), priority: 'Low', section: 'Upcoming', completed: false, createdAt: new Date().toISOString() },
+  { id: 'task_5', title: 'Buy Groceries', description: 'Fruits and vegetables', dueDate: getFormattedDate(), priority: 'Medium', section: 'Today', completed: false, createdAt: new Date().toISOString() },
+];
+
+const INITIAL_BILLS: BillItem[] = [
+  { id: 'bill_1', title: 'House Rent', amount: 12000, dueDate: '2026-08-05', recurring: true, status: 'Paid', category: 'Rent', accountId: 'acc_bank', createdAt: new Date().toISOString() },
+  { id: 'bill_2', title: 'Electricity Bill', amount: 1600, dueDate: '2026-08-08', recurring: true, status: 'Pending', category: 'Electricity', accountId: 'acc_upi', createdAt: new Date().toISOString() },
+  { id: 'bill_3', title: 'Airtel Broadband', amount: 999, dueDate: '2026-08-15', recurring: true, status: 'Pending', category: 'Internet', accountId: 'acc_upi', createdAt: new Date().toISOString() },
+];
+
+const INITIAL_GOALS: SavingsGoal[] = [
+  { id: 'goal_1', title: 'Emergency Fund', targetAmount: 200000, savedAmount: 58000, targetDate: '2026-12-31', icon: 'shield', category: 'Emergency' },
+  { id: 'goal_2', title: 'Vacation Trip', targetAmount: 60000, savedAmount: 25000, targetDate: '2026-11-15', icon: 'plane', category: 'Travel' },
+  { id: 'goal_3', title: 'New Laptop', targetAmount: 90000, savedAmount: 45000, targetDate: '2026-10-01', icon: 'laptop', category: 'Gadgets' },
+];
+
+const INITIAL_TRANSACTIONS: Transaction[] = [
+  { id: 'tx_1', title: 'Pizza & Drinks', description: 'Pizza & Drinks', amount: 350, type: 'Expense', category: 'Food', accountId: 'acc_upi', paymentMethod: 'UPI', transactionDate: getFormattedDate(), expenseDate: getFormattedDate(), createdAt: new Date().toISOString() },
+  { id: 'tx_2', title: 'Monthly Salary', description: 'Monthly Salary', amount: 65000, type: 'Income', category: 'Salary', accountId: 'acc_bank', paymentMethod: 'Bank', transactionDate: '2026-08-01', expenseDate: '2026-08-01', createdAt: new Date().toISOString() },
+  { id: 'tx_3', title: 'Petrol Refill', description: 'Petrol Refill', amount: 1500, type: 'Expense', category: 'Fuel', accountId: 'acc_card', paymentMethod: 'Credit Card', transactionDate: '2026-08-04', expenseDate: '2026-08-04', createdAt: new Date().toISOString() },
+];
 
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
       profile: DEFAULT_PROFILE,
-      accounts: [],
-      expenses: [],
-      budgets: [],
-      savingsGoals: [],
+      accounts: INITIAL_ACCOUNTS,
+      transactions: INITIAL_TRANSACTIONS,
+      expenses: INITIAL_TRANSACTIONS,
+      budgets: [
+        { category: 'Food', monthlyLimit: 5000 },
+        { category: 'Fuel', monthlyLimit: 3000 },
+        { category: 'Shopping', monthlyLimit: 4000 },
+        { category: 'Travel', monthlyLimit: 6000 },
+        { category: 'Medical', monthlyLimit: 2000 },
+      ],
+      savingsGoals: INITIAL_GOALS,
+      tasks: INITIAL_TASKS,
+      bills: INITIAL_BILLS,
       recurring: [],
       notifications: [],
       splitExpenses: [],
@@ -90,35 +165,52 @@ export const useFinanceStore = create<FinanceState>()(
 
         set({ isLoading: true });
         const res = await fetchFullUserDataFromSupabase(userId);
-        if (res.success) {
-          set((state) => ({
-            profile: res.profile
-              ? {
-                  id: res.profile.id,
-                  name: res.profile.name,
-                  monthlyIncome: parseFloat(res.profile.monthly_income),
-                  salaryDate: parseInt(res.profile.salary_date, 10),
-                  savingsGoal: parseFloat(res.profile.savings_goal),
-                  currency: res.profile.currency,
-                  isSetupComplete: true,
-                }
-              : state.profile,
-            expenses: res.expenses || [],
-            accounts: res.accounts.length > 0
-              ? res.accounts.map((a: any) => ({
-                  id: a.id,
-                  name: a.name,
-                  type: a.type,
-                  balance: parseFloat(a.balance),
-                  creditLimit: parseFloat(a.credit_limit || 0),
-                  icon: a.type,
-                  color: a.type === 'wallet' ? '#10b981' : a.type === 'bank' ? '#3b82f6' : a.type === 'upi' ? '#8b5cf6' : '#f59e0b',
-                }))
-              : state.accounts,
-            budgets: res.budgets || [],
-            savingsGoals: res.goals || [],
-            isLoading: false,
-          }));
+        if (res.success && res.profile) {
+          set((state) => {
+            const fetchedTxs: Transaction[] = res.expenses.map((e: any) => ({
+              id: e.id,
+              title: e.description || e.category,
+              description: e.description || e.category,
+              amount: parseFloat(e.amount),
+              type: (e.paymentMethod === 'Income' ? 'Income' : 'Expense') as TransactionType,
+              category: e.category,
+              accountId: e.accountId,
+              paymentMethod: e.paymentMethod,
+              transactionDate: e.expenseDate || getFormattedDate(),
+              expenseDate: e.expenseDate || getFormattedDate(),
+              createdAt: e.createdAt,
+              location: e.location,
+              attachment: e.receiptUrl,
+            }));
+
+            return {
+              profile: {
+                id: res.profile.id,
+                name: res.profile.name || state.profile.name,
+                monthlyIncome: parseFloat(res.profile.monthly_income || '65000'),
+                salaryDate: parseInt(res.profile.salary_date || '1', 10),
+                savingsGoal: parseFloat(res.profile.savings_goal || '20000'),
+                currency: res.profile.currency || '₹',
+                isSetupComplete: true,
+              },
+              transactions: fetchedTxs.length > 0 ? fetchedTxs : state.transactions,
+              expenses: fetchedTxs.length > 0 ? fetchedTxs : state.expenses,
+              accounts: res.accounts.length > 0
+                ? res.accounts.map((a: any) => ({
+                    id: a.id,
+                    name: a.name,
+                    type: a.type,
+                    balance: parseFloat(a.balance),
+                    creditLimit: parseFloat(a.credit_limit || 0),
+                    icon: a.type,
+                    color: a.type === 'wallet' ? '#10b981' : a.type === 'bank' ? '#3b82f6' : a.type === 'upi' ? '#8b5cf6' : '#f59e0b',
+                  }))
+                : state.accounts,
+              budgets: res.budgets || state.budgets,
+              savingsGoals: res.goals || state.savingsGoals,
+              isLoading: false,
+            };
+          });
         } else {
           set({ isLoading: false });
         }
@@ -141,10 +233,8 @@ export const useFinanceStore = create<FinanceState>()(
         set({
           profile: newProfile,
           accounts: newAccounts,
-          expenses: [],
         });
 
-        // Sync to Supabase DB asynchronously
         saveUserToSupabase(newProfile);
         saveAccountsToSupabase(newProfile.id, newAccounts);
       },
@@ -157,55 +247,154 @@ export const useFinanceStore = create<FinanceState>()(
         });
       },
 
-      addExpense: (expenseData) => {
-        const id = `exp_${Date.now()}`;
-        const newExpense: Expense = {
-          ...expenseData,
+      addTransaction: (txData) => {
+        const id = `tx_${Date.now()}`;
+        const dateStr = txData.transactionDate || (txData as any).expenseDate || getFormattedDate();
+        const titleStr = txData.title || (txData as any).description || `${txData.type || 'Expense'}: ${txData.category}`;
+
+        const newTx: Transaction = {
+          ...txData,
           id,
+          title: titleStr,
+          description: titleStr,
+          transactionDate: dateStr,
+          expenseDate: dateStr,
+          type: txData.type || 'Expense',
+          paymentMethod: (txData.paymentMethod as PaymentMethod) || 'UPI',
           createdAt: new Date().toISOString(),
         };
 
         set((state) => {
           const updatedAccounts = state.accounts.map((acc) => {
-            if (acc.id === expenseData.accountId || acc.name.toLowerCase().includes(expenseData.paymentMethod.toLowerCase())) {
-              return { ...acc, balance: Math.max(0, acc.balance - expenseData.amount) };
+            if (acc.id === txData.accountId || acc.name.toLowerCase().includes(txData.paymentMethod.toLowerCase())) {
+              if (txData.type === 'Income' || txData.type === 'Borrow') {
+                return { ...acc, balance: acc.balance + txData.amount };
+              } else {
+                return { ...acc, balance: Math.max(0, acc.balance - txData.amount) };
+              }
             }
             return acc;
           });
 
-          // Sync to Supabase DB
-          saveExpenseToSupabase(state.profile.id, newExpense);
+          const updatedTxs = [newTx, ...state.transactions];
+          saveExpenseToSupabase(state.profile.id, newTx);
           saveAccountsToSupabase(state.profile.id, updatedAccounts);
 
           return {
-            expenses: [newExpense, ...state.expenses],
+            transactions: updatedTxs,
+            expenses: updatedTxs,
             accounts: updatedAccounts,
           };
         });
       },
 
-      deleteExpense: (id) => {
+      addExpense: (txData) => get().addTransaction({ ...txData, type: txData.type || 'Expense' }),
+
+      updateTransaction: (id, updatedData) => {
         set((state) => {
-          const exp = state.expenses.find((e) => e.id === id);
+          const updatedTxs = state.transactions.map((t) => (t.id === id ? { ...t, ...updatedData } : t));
+          return { transactions: updatedTxs, expenses: updatedTxs };
+        });
+      },
+
+      deleteTransaction: (id) => {
+        set((state) => {
+          const tx = state.transactions.find((t) => t.id === id);
           let updatedAccounts = state.accounts;
-          if (exp) {
+          if (tx) {
             updatedAccounts = state.accounts.map((acc) => {
-              if (acc.id === exp.accountId) {
-                return { ...acc, balance: acc.balance + exp.amount };
+              if (acc.id === tx.accountId) {
+                return tx.type === 'Income' || tx.type === 'Borrow'
+                  ? { ...acc, balance: Math.max(0, acc.balance - tx.amount) }
+                  : { ...acc, balance: acc.balance + tx.amount };
               }
               return acc;
             });
           }
 
-          // Delete from Supabase DB
           deleteExpenseFromSupabase(id);
           saveAccountsToSupabase(state.profile.id, updatedAccounts);
 
+          const filtered = state.transactions.filter((t) => t.id !== id);
           return {
-            expenses: state.expenses.filter((e) => e.id !== id),
+            transactions: filtered,
+            expenses: filtered,
             accounts: updatedAccounts,
           };
         });
+      },
+
+      deleteExpense: (id) => get().deleteTransaction(id),
+
+      duplicateTransaction: (id) => {
+        const tx = get().transactions.find((t) => t.id === id);
+        if (tx) {
+          const { id: _, createdAt: __, ...rest } = tx;
+          get().addTransaction({ ...rest, title: `${rest.title} (Copy)`, transactionDate: getFormattedDate() });
+        }
+      },
+
+      addTask: (taskData) => {
+        const newTask: TaskItem = {
+          ...taskData,
+          id: `task_${Date.now()}`,
+          createdAt: new Date().toISOString(),
+        };
+        set((state) => ({ tasks: [newTask, ...state.tasks] }));
+      },
+
+      toggleTaskCompleted: (id) => {
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed, section: !t.completed ? 'Completed' : 'Today' } : t)),
+        }));
+      },
+
+      deleteTask: (id) => {
+        set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
+      },
+
+      updateTask: (id, taskData) => {
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...taskData } : t)),
+        }));
+      },
+
+      addBill: (billData) => {
+        const newBill: BillItem = {
+          ...billData,
+          id: `bill_${Date.now()}`,
+          createdAt: new Date().toISOString(),
+        };
+        set((state) => ({ bills: [newBill, ...state.bills] }));
+      },
+
+      toggleBillStatus: (id) => {
+        set((state) => {
+          const targetBill = state.bills.find((b) => b.id === id);
+          if (!targetBill) return state;
+
+          const nextStatus: 'Pending' | 'Paid' = targetBill.status === 'Pending' ? 'Paid' : 'Pending';
+          const updatedBills = state.bills.map((b) => (b.id === id ? { ...b, status: nextStatus } : b));
+
+          // If marked as Paid, create a corresponding transaction automatically!
+          if (nextStatus === 'Paid') {
+            get().addTransaction({
+              title: `Bill Paid: ${targetBill.title}`,
+              amount: targetBill.amount,
+              type: 'Expense',
+              category: targetBill.category || 'Bills',
+              accountId: targetBill.accountId || state.accounts[0]?.id || 'acc_upi',
+              paymentMethod: 'UPI',
+              transactionDate: getFormattedDate(),
+            });
+          }
+
+          return { bills: updatedBills };
+        });
+      },
+
+      deleteBill: (id) => {
+        set((state) => ({ bills: state.bills.filter((b) => b.id !== id) }));
       },
 
       updateAccountBalance: (accountId, newBalance) => {
@@ -252,6 +441,10 @@ export const useFinanceStore = create<FinanceState>()(
         });
       },
 
+      deleteSavingsGoal: (id) => {
+        set((state) => ({ savingsGoals: state.savingsGoals.filter((g) => g.id !== id) }));
+      },
+
       addRecurringTransaction: (recData) => {
         const newRec: RecurringTransaction = { ...recData, id: `rec_${Date.now()}` };
         set((state) => ({ recurring: [...state.recurring, newRec] }));
@@ -261,24 +454,25 @@ export const useFinanceStore = create<FinanceState>()(
         const todayStr = getFormattedDate();
         set((state) => {
           let updatedAccounts = [...state.accounts];
-          const updatedExpenses = [...state.expenses];
+          const updatedTxs = [...state.transactions];
 
           state.recurring.forEach((rec) => {
             if (rec.autoDeduct && rec.nextDueDate <= todayStr) {
-              const newExp: Expense = {
-                id: `exp_auto_${Date.now()}_${rec.id}`,
-                accountId: rec.accountId,
+              const newTx: Transaction = {
+                id: `tx_auto_${Date.now()}_${rec.id}`,
+                title: `Auto-Deduct: ${rec.title}`,
                 amount: rec.amount,
+                type: 'Expense',
                 category: rec.category,
-                description: `Auto-Deduct: ${rec.title}`,
-                paymentMethod: 'Auto Debit',
-                expenseDate: todayStr,
+                accountId: rec.accountId,
+                paymentMethod: 'UPI',
+                transactionDate: todayStr,
                 createdAt: new Date().toISOString(),
-                isRecurring: true,
+                recurring: true,
               };
 
-              updatedExpenses.unshift(newExp);
-              saveExpenseToSupabase(state.profile.id, newExp);
+              updatedTxs.unshift(newTx);
+              saveExpenseToSupabase(state.profile.id, newTx);
 
               updatedAccounts = updatedAccounts.map((a) =>
                 a.id === rec.accountId ? { ...a, balance: Math.max(0, a.balance - rec.amount) } : a
@@ -287,7 +481,7 @@ export const useFinanceStore = create<FinanceState>()(
           });
 
           saveAccountsToSupabase(state.profile.id, updatedAccounts);
-          return { accounts: updatedAccounts, expenses: updatedExpenses };
+          return { accounts: updatedAccounts, transactions: updatedTxs, expenses: updatedTxs };
         });
       },
 
@@ -324,10 +518,13 @@ export const useFinanceStore = create<FinanceState>()(
       resetAllData: () => {
         set({
           profile: DEFAULT_PROFILE,
-          accounts: [],
-          expenses: [],
+          accounts: INITIAL_ACCOUNTS,
+          transactions: INITIAL_TRANSACTIONS,
+          expenses: INITIAL_TRANSACTIONS,
           budgets: [],
-          savingsGoals: [],
+          savingsGoals: INITIAL_GOALS,
+          tasks: INITIAL_TASKS,
+          bills: INITIAL_BILLS,
           recurring: [],
           splitExpenses: [],
           isLocked: false,
@@ -335,7 +532,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
     }),
     {
-      name: 'finance-app-storage',
+      name: 'finance-app-os-storage',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

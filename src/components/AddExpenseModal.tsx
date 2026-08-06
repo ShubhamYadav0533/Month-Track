@@ -11,7 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { ExpenseCategory } from '../types';
+import { ExpenseCategory, PaymentMethod } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import { parseReceiptImage, ParsedReceipt } from '../utils/ocrParser';
 import { X, Camera, MapPin, Sparkles, Check } from 'lucide-react-native';
@@ -73,11 +73,14 @@ export function AddExpenseModal({ visible, onClose }: AddExpenseModalProps) {
     );
 
     addExpense({
+      title: description || category,
+      type: 'Expense',
+      transactionDate: expenseDate,
       accountId: matchedAccount ? matchedAccount.id : accounts[0]?.id || 'acc_upi',
       amount: numericAmount,
       category,
       description: description || category,
-      paymentMethod,
+      paymentMethod: paymentMethod as PaymentMethod,
       location: location || undefined,
       receiptUrl: receiptUrl || undefined,
       expenseDate,

@@ -1,21 +1,42 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, ScrollView } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { SecurityLockScreen } from '../components/SecurityLockScreen';
 import { SetupWizard } from '../components/SetupWizard';
+
 import { LiveDashboard } from '../components/LiveDashboard';
-import { AnalyticsScreen } from '../components/AnalyticsScreen';
-import { AIInsightsScreen } from '../components/AIInsightsScreen';
+import { TransactionsScreen } from '../components/TransactionsScreen';
+import { TodayTasksScreen } from '../components/TodayTasksScreen';
+import { MonthlyPlannerScreen } from '../components/MonthlyPlannerScreen';
 import { GoalsScreen } from '../components/GoalsScreen';
-import { RecurringScreen } from '../components/RecurringScreen';
-import { SplitScreen } from '../components/SplitScreen';
+import { BillsEMIScreen } from '../components/BillsEMIScreen';
+import { AnalyticsScreen } from '../components/AnalyticsScreen';
 import { SettingsExportScreen } from '../components/SettingsExportScreen';
 
-import { LayoutDashboard, PieChart, Bot, Target, Settings, RefreshCw, Users } from 'lucide-react-native';
+import {
+  LayoutDashboard,
+  Receipt,
+  CheckSquare,
+  Calendar,
+  Target,
+  CreditCard,
+  BarChart3,
+  User,
+} from 'lucide-react-native';
+
+type OSTab =
+  | 'dashboard'
+  | 'transactions'
+  | 'tasks'
+  | 'planner'
+  | 'goals'
+  | 'bills'
+  | 'reports'
+  | 'profile';
 
 export default function MainApp() {
   const { profile, isLocked } = useFinanceStore();
-  const [currentTab, setCurrentTab] = useState<'dashboard' | 'analytics' | 'ai' | 'goals' | 'recurring' | 'split' | 'settings'>('dashboard');
+  const [currentTab, setCurrentTab] = useState<OSTab>('dashboard');
 
   // Guard 1: Passcode Security Lock
   if (isLocked) {
@@ -27,6 +48,17 @@ export default function MainApp() {
     return <SetupWizard />;
   }
 
+  const tabs: { id: OSTab; label: string; icon: React.ReactNode }[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} color={currentTab === 'dashboard' ? '#10b981' : '#64748b'} /> },
+    { id: 'transactions', label: 'Transactions', icon: <Receipt size={20} color={currentTab === 'transactions' ? '#10b981' : '#64748b'} /> },
+    { id: 'tasks', label: "Today's Tasks", icon: <CheckSquare size={20} color={currentTab === 'tasks' ? '#10b981' : '#64748b'} /> },
+    { id: 'planner', label: 'Planner', icon: <Calendar size={20} color={currentTab === 'planner' ? '#10b981' : '#64748b'} /> },
+    { id: 'goals', label: 'Goals', icon: <Target size={20} color={currentTab === 'goals' ? '#10b981' : '#64748b'} /> },
+    { id: 'bills', label: 'Bills & EMI', icon: <CreditCard size={20} color={currentTab === 'bills' ? '#10b981' : '#64748b'} /> },
+    { id: 'reports', label: 'Reports', icon: <BarChart3 size={20} color={currentTab === 'reports' ? '#10b981' : '#64748b'} /> },
+    { id: 'profile', label: 'Profile', icon: <User size={20} color={currentTab === 'profile' ? '#10b981' : '#64748b'} /> },
+  ];
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
@@ -34,145 +66,35 @@ export default function MainApp() {
       {/* Screen Content Render */}
       <View style={styles.content}>
         {currentTab === 'dashboard' && <LiveDashboard />}
-        {currentTab === 'analytics' && <AnalyticsScreen />}
-        {currentTab === 'ai' && <AIInsightsScreen />}
+        {currentTab === 'transactions' && <TransactionsScreen />}
+        {currentTab === 'tasks' && <TodayTasksScreen />}
+        {currentTab === 'planner' && <MonthlyPlannerScreen />}
         {currentTab === 'goals' && <GoalsScreen />}
-        {currentTab === 'recurring' && <RecurringScreen />}
-        {currentTab === 'split' && <SplitScreen />}
-        {currentTab === 'settings' && <SettingsExportScreen />}
+        {currentTab === 'bills' && <BillsEMIScreen />}
+        {currentTab === 'reports' && <AnalyticsScreen />}
+        {currentTab === 'profile' && <SettingsExportScreen />}
       </View>
 
-      {/* Sub-navigation bar for Goals / Recurring / Split */}
-      {(currentTab === 'goals' || currentTab === 'recurring' || currentTab === 'split') && (
-        <View style={styles.subTabBar}>
-          <TouchableOpacity
-            style={[styles.subTabBtn, currentTab === 'goals' && styles.subTabBtnActive]}
-            onPress={() => setCurrentTab('goals')}
-          >
-            <Target size={14} color={currentTab === 'goals' ? '#10b981' : '#94a3b8'} />
-            <Text style={[styles.subTabText, currentTab === 'goals' && styles.subTabTextActive]}>
-              Goals
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.subTabBtn, currentTab === 'recurring' && styles.subTabBtnActive]}
-            onPress={() => setCurrentTab('recurring')}
-          >
-            <RefreshCw size={14} color={currentTab === 'recurring' ? '#10b981' : '#94a3b8'} />
-            <Text style={[styles.subTabText, currentTab === 'recurring' && styles.subTabTextActive]}>
-              Recurring Bills
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.subTabBtn, currentTab === 'split' && styles.subTabBtnActive]}
-            onPress={() => setCurrentTab('split')}
-          >
-            <Users size={14} color={currentTab === 'split' ? '#10b981' : '#94a3b8'} />
-            <Text style={[styles.subTabText, currentTab === 'split' && styles.subTabTextActive]}>
-              Split Bills
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {/* Primary Bottom Navigation Bar */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setCurrentTab('dashboard')}
+      {/* Primary OS Bottom Navigation Bar */}
+      <View style={styles.bottomNavContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.bottomNavScroll}
         >
-          <LayoutDashboard
-            size={22}
-            color={currentTab === 'dashboard' ? '#10b981' : '#64748b'}
-          />
-          <Text
-            style={[
-              styles.navText,
-              currentTab === 'dashboard' && styles.navTextActive,
-            ]}
-          >
-            Dashboard
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setCurrentTab('analytics')}
-        >
-          <PieChart
-            size={22}
-            color={currentTab === 'analytics' ? '#10b981' : '#64748b'}
-          />
-          <Text
-            style={[
-              styles.navText,
-              currentTab === 'analytics' && styles.navTextActive,
-            ]}
-          >
-            Analytics
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setCurrentTab('ai')}
-        >
-          <Bot
-            size={22}
-            color={currentTab === 'ai' ? '#10b981' : '#64748b'}
-          />
-          <Text
-            style={[
-              styles.navText,
-              currentTab === 'ai' && styles.navTextActive,
-            ]}
-          >
-            AI Engine
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setCurrentTab('goals')}
-        >
-          <Target
-            size={22}
-            color={
-              currentTab === 'goals' || currentTab === 'recurring' || currentTab === 'split'
-                ? '#10b981'
-                : '#64748b'
-            }
-          />
-          <Text
-            style={[
-              styles.navText,
-              (currentTab === 'goals' || currentTab === 'recurring' || currentTab === 'split') &&
-                styles.navTextActive,
-            ]}
-          >
-            Goals & Bills
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => setCurrentTab('settings')}
-        >
-          <Settings
-            size={22}
-            color={currentTab === 'settings' ? '#10b981' : '#64748b'}
-          />
-          <Text
-            style={[
-              styles.navText,
-              currentTab === 'settings' && styles.navTextActive,
-            ]}
-          >
-            Settings
-          </Text>
-        </TouchableOpacity>
+          {tabs.map((t) => (
+            <TouchableOpacity
+              key={t.id}
+              style={[styles.navItem, currentTab === t.id && styles.navItemActive]}
+              onPress={() => setCurrentTab(t.id)}
+            >
+              {t.icon}
+              <Text style={[styles.navText, currentTab === t.id && styles.navTextActive]}>
+                {t.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
     </SafeAreaView>
   );
@@ -186,60 +108,37 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  subTabBar: {
-    flexDirection: 'row',
-    backgroundColor: '#1e293b',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-    gap: 8,
-  },
-  subTabBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#0f172a',
-  },
-  subTabBtnActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  subTabText: {
-    fontSize: 11,
-    color: '#94a3b8',
-    fontWeight: '600',
-  },
-  subTabTextActive: {
-    color: '#10b981',
-    fontWeight: '700',
-  },
-  bottomNav: {
-    flexDirection: 'row',
+  bottomNavContainer: {
     backgroundColor: '#0f172a',
     borderTopWidth: 1,
     borderTopColor: '#1e293b',
-    paddingVertical: 10,
-    paddingHorizontal: 10,
-    justifyContent: 'space-around',
+    paddingVertical: 8,
+  },
+  bottomNavScroll: {
+    paddingHorizontal: 12,
+    gap: 6,
     alignItems: 'center',
   },
   navItem: {
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    minWidth: 70,
+  },
+  navItemActive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
   },
   navText: {
-    fontSize: 11,
+    fontSize: 10,
     color: '#64748b',
-    fontWeight: '500',
+    fontWeight: '600',
+    marginTop: 4,
   },
   navTextActive: {
     color: '#10b981',
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

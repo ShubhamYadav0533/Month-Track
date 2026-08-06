@@ -38,11 +38,11 @@ export function generateAISuggestions(
   twoWeeksAgo.setDate(now.getDate() - 14);
 
   const thisWeekFood = expenses
-    .filter(e => e.category === 'Food' && new Date(e.expenseDate) >= oneWeekAgo)
+    .filter(e => e.category === 'Food' && new Date(e.expenseDate || e.transactionDate) >= oneWeekAgo)
     .reduce((sum, e) => sum + e.amount, 0);
 
   const lastWeekFood = expenses
-    .filter(e => e.category === 'Food' && new Date(e.expenseDate) >= twoWeeksAgo && new Date(e.expenseDate) < oneWeekAgo)
+    .filter(e => e.category === 'Food' && new Date(e.expenseDate || e.transactionDate) >= twoWeeksAgo && new Date(e.expenseDate || e.transactionDate) < oneWeekAgo)
     .reduce((sum, e) => sum + e.amount, 0);
 
   if (lastWeekFood > 0 && thisWeekFood > lastWeekFood * 1.25) {
@@ -75,7 +75,7 @@ export function generateAISuggestions(
 
   // 4. Saving Praise / Positive Reinforcement
   const thisWeekTotalSpent = expenses
-    .filter(e => new Date(e.expenseDate) >= oneWeekAgo)
+    .filter(e => new Date(e.expenseDate || e.transactionDate) >= oneWeekAgo)
     .reduce((sum, e) => sum + e.amount, 0);
 
   const weeklyIncome = Math.round(profile.monthlyIncome / 4);

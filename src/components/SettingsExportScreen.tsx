@@ -7,131 +7,170 @@ import {
   TextInput,
   StyleSheet,
   SafeAreaView,
+  Switch,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { exportExpensesToCSV, generateBackupJSON } from '../utils/exportUtils';
-import { Search, Download, Shield, Trash2, FileSpreadsheet } from 'lucide-react-native';
+import { Download, Shield, Trash2, FileSpreadsheet, Lock, User, Save } from 'lucide-react-native';
 
 export function SettingsExportScreen() {
-  const { profile, accounts, expenses, updateProfile, resetAllData } = useFinanceStore();
+  const { profile, accounts, transactions, updateProfile, resetAllData, lockApp } = useFinanceStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [name, setName] = useState(profile.name);
+  const [monthlyIncome, setMonthlyIncome] = useState(profile.monthlyIncome.toString());
+  const [salaryDate, setSalaryDate] = useState(profile.salaryDate.toString());
+  const [currency, setCurrency] = useState(profile.currency);
   const [pinInput, setPinInput] = useState(profile.pinCode || '');
-  const [exportNotice, setExportNotice] = useState('');
+  const [darkMode, setDarkMode] = useState(true);
+  const [bioEnabled, setBioEnabled] = useState(profile.isBiometricsEnabled || false);
 
-  // Filter expenses by search query (e.g. "Coffee")
-  const filteredExpenses = expenses.filter(
-    (e) =>
-      e.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      e.paymentMethod.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleSaveProfile = () => {
+    const inc = parseFloat(monthlyIncome);
+    const salDay = parseInt(salaryDate, 10);
 
-  const handleExportCSV = () => {
-    const csv = exportExpensesToCSV(expenses, profile.currency);
-    setExportNotice(`✅ Exported ${expenses.length} records to CSV format!\nFirst lines:\n${csv.split('\n').slice(0, 3).join('\n')}`);
+    updateProfile({
+      name,
+      monthlyIncome: isNaN(inc) ? profile.monthlyIncome : inc,
+      salaryDate: isNaN(salDay) ? profile.salaryDate : salDay,
+      currency,
+      pinCode: pinInput || undefined,
+      isBiometricsEnabled: bioEnabled,
+    });
   };
 
-  const handleBackupJSON = () => {
-    const json = generateBackupJSON(profile, accounts, expenses);
-    setExportNotice(`✅ Created Cloud/Local JSON Backup (${json.length} bytes)`);
+  const handleExportCSV = async () => {
+    await exportExpensesToCSV(transactions);
   };
 
-  const handleSavePin = () => {
-    updateProfile({ pinCode: pinInput });
-    setExportNotice(pinInput ? `✅ Passcode PIN set to ${pinInput}` : '✅ PIN Code removed');
+  const handleExportJSON = async () => {
+    await generateBackupJSON(profile, accounts, transactions);
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Search, Backup & Security</Text>
-          <Text style={styles.subtitle}>Filter expenses, export reports (CSV/PDF) & lock app</Text>
-        </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Profile & Settings</Text>
+        <Text style={styles.subtitle}>Customize your Personal Finance OS preferences, export & security</Text>
+      </View>
 
-        {/* Search Expenses */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Search Expenses</Text>
-          <View style={styles.searchBox}>
-            <Search size={18} color="#94a3b8" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search Coffee, Fuel, Food..."
-              placeholderTextColor="#64748b"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-            />
-          </View>
-
-          {searchQuery !== '' && (
-            <View style={styles.searchResults}>
-              <Text style={styles.resultsHeader}>
-                Found {filteredExpenses.length} matching expenses:
-              </Text>
-              {filteredExpenses.map((exp) => (
-                <View key={exp.id} style={styles.resultItem}>
-                  <Text style={styles.resultDesc}>{exp.description}</Text>
-                  <Text style={styles.resultAmt}>
-                    -{profile.currency}{exp.amount}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-
-        {/* Security & PIN Setup */}
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* User Profile Card */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Shield size={20} color="#10b981" />
-            <Text style={styles.cardTitle}>Security & Biometric Lock</Text>
+            <User size={18} color="#10b981" />
+            <Text style={styles.cardTitle}>Personal Profile</Text>
           </View>
-          <Text style={styles.label}>Set 4-Digit Passcode PIN</Text>
-          <View style={styles.pinRow}>
-            <TextInput
-              style={styles.pinInput}
-              keyboardType="numeric"
-              maxLength={4}
-              placeholder="1234"
-              placeholderTextColor="#64748b"
-              value={pinInput}
-              onChangeText={setPinInput}
-              secureTextEntry
-            />
-            <TouchableOpacity style={styles.savePinBtn} onPress={handleSavePin}>
-              <Text style={styles.savePinText}>Save PIN</Text>
-            </TouchableOpacity>
+
+          <Text style={styles.label}>Your Name</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Shubham"
+            placeholderTextColor="#64748b"
+          />
+
+          <View style={styles.row}>
+            <View style={[styles.col, { flex: 1 }]}>
+              <Text style={styles.label}>Monthly Income (₹)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={monthlyIncome}
+                onChangeText={setMonthlyIncome}
+                placeholder="65000"
+                placeholderTextColor="#64748b"
+              />
+            </View>
+
+            <View style={[styles.col, { flex: 1 }]}>
+              <Text style={styles.label}>Salary Day (1-31)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={salaryDate}
+                onChangeText={setSalaryDate}
+                placeholder="1"
+                placeholderTextColor="#64748b"
+              />
+            </View>
           </View>
+
+          <Text style={styles.label}>Currency Symbol</Text>
+          <TextInput
+            style={styles.input}
+            value={currency}
+            onChangeText={setCurrency}
+            placeholder="₹"
+            placeholderTextColor="#64748b"
+          />
+
+          <TouchableOpacity style={styles.saveBtn} onPress={handleSaveProfile}>
+            <Save size={16} color="#ffffff" />
+            <Text style={styles.saveBtnText}>Save Profile Settings</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Export & Backup */}
+        {/* Security & App Options */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Export Data & Backup</Text>
-
-          <View style={styles.exportBtnRow}>
-            <TouchableOpacity style={styles.exportBtn} onPress={handleExportCSV}>
-              <FileSpreadsheet size={18} color="#10b981" />
-              <Text style={styles.exportBtnText}>Export CSV / Excel</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.exportBtn} onPress={handleBackupJSON}>
-              <Download size={18} color="#3b82f6" />
-              <Text style={styles.exportBtnText}>JSON Backup</Text>
-            </TouchableOpacity>
+          <View style={styles.cardHeader}>
+            <Shield size={18} color="#3b82f6" />
+            <Text style={styles.cardTitle}>App Preferences & Security</Text>
           </View>
 
-          {exportNotice !== '' && (
-            <View style={styles.noticeBox}>
-              <Text style={styles.noticeText}>{exportNotice}</Text>
-            </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Dark Mode (Default)</Text>
+            <Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#334155', true: '#10b981' }} />
+          </View>
+
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Biometric / Fingerprint Unlock</Text>
+            <Switch value={bioEnabled} onValueChange={setBioEnabled} trackColor={{ false: '#334155', true: '#10b981' }} />
+          </View>
+
+          <Text style={styles.label}>Security Passcode PIN (4 digits)</Text>
+          <TextInput
+            style={styles.input}
+            keyboardType="numeric"
+            secureTextEntry
+            maxLength={4}
+            value={pinInput}
+            onChangeText={setPinInput}
+            placeholder="Set 4-digit PIN"
+            placeholderTextColor="#64748b"
+          />
+
+          {profile.pinCode && (
+            <TouchableOpacity style={styles.lockBtn} onPress={lockApp}>
+              <Lock size={16} color="#3b82f6" />
+              <Text style={styles.lockBtnText}>Lock App Now</Text>
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* Reset App Data */}
+        {/* Export & Data Backup */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Download size={18} color="#f59e0b" />
+            <Text style={styles.cardTitle}>Data Export & Backup</Text>
+          </View>
+
+          <TouchableOpacity style={styles.exportBtn} onPress={handleExportCSV}>
+            <FileSpreadsheet size={18} color="#10b981" />
+            <Text style={styles.exportBtnText}>Export Transactions to CSV / Excel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.exportBtn, { marginTop: 10 }]} onPress={handleExportJSON}>
+            <Download size={18} color="#3b82f6" />
+            <Text style={[styles.exportBtnText, { color: '#3b82f6' }]}>Backup Data to JSON File</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Reset All Data */}
         <TouchableOpacity style={styles.resetBtn} onPress={resetAllData}>
-          <Trash2 size={18} color="#ef4444" />
-          <Text style={styles.resetBtnText}>Reset All App Data</Text>
+          <Trash2 size={16} color="#ef4444" />
+          <Text style={styles.resetBtnText}>Reset All Data to Default</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -143,27 +182,30 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0f172a',
   },
-  scrollContent: {
-    padding: 18,
-    paddingBottom: 40,
-  },
   header: {
-    marginBottom: 20,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 10,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
-    color: '#ffffff',
+    color: '#f8fafc',
   },
   subtitle: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#94a3b8',
+    marginTop: 4,
+  },
+  scrollContent: {
+    paddingHorizontal: 18,
+    paddingBottom: 40,
+    gap: 14,
   },
   card: {
     backgroundColor: '#1e293b',
-    borderRadius: 20,
-    padding: 18,
-    marginBottom: 16,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#334155',
   },
@@ -176,129 +218,100 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 12,
-  },
-  searchBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#0f172a',
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    paddingHorizontal: 12,
-    height: 46,
-    gap: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#ffffff',
-    fontSize: 14,
-  },
-  searchResults: {
-    marginTop: 12,
-    gap: 6,
-  },
-  resultsHeader: {
-    fontSize: 12,
-    color: '#10b981',
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  resultItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#0f172a',
-    padding: 10,
-    borderRadius: 10,
-  },
-  resultDesc: {
-    color: '#cbd5e1',
-    fontSize: 13,
-  },
-  resultAmt: {
-    color: '#ef4444',
-    fontWeight: '700',
-    fontSize: 13,
+    color: '#f8fafc',
   },
   label: {
     fontSize: 12,
     color: '#94a3b8',
+    fontWeight: '600',
     marginBottom: 6,
+    marginTop: 10,
   },
-  pinRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  pinInput: {
-    flex: 1,
+  input: {
     backgroundColor: '#0f172a',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#334155',
     paddingHorizontal: 14,
-    height: 44,
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 4,
+    paddingVertical: 10,
+    color: '#f8fafc',
+    fontSize: 14,
   },
-  savePinBtn: {
-    backgroundColor: '#10b981',
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  savePinText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 13,
-  },
-  exportBtnRow: {
+  row: {
     flexDirection: 'row',
     gap: 10,
   },
-  exportBtn: {
+  col: {
     flex: 1,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  switchLabel: {
+    fontSize: 13,
+    color: '#f8fafc',
+    fontWeight: '600',
+  },
+  saveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10b981',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  saveBtnText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  lockBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(59, 130, 246, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginTop: 12,
+  },
+  lockBtnText: {
+    color: '#3b82f6',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  exportBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     backgroundColor: '#0f172a',
-    paddingVertical: 12,
     borderRadius: 12,
+    paddingVertical: 12,
     borderWidth: 1,
     borderColor: '#334155',
   },
   exportBtnText: {
-    color: '#cbd5e1',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  noticeBox: {
-    marginTop: 12,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    padding: 10,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-  },
-  noticeText: {
     color: '#10b981',
-    fontSize: 12,
+    fontWeight: '700',
+    fontSize: 13,
   },
   resetBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderRadius: 14,
     paddingVertical: 14,
-    borderRadius: 16,
+    marginTop: 6,
     borderWidth: 1,
     borderColor: 'rgba(239, 68, 68, 0.3)',
-    marginTop: 10,
   },
   resetBtnText: {
     color: '#ef4444',
