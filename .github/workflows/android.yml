@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - '**.md'
+      - 'server/**'
+      - 'supabase/**'
+      - '.vscode/**'
+      - 'LICENSE'
   workflow_dispatch:
 
 jobs:
@@ -34,18 +40,18 @@ jobs:
           echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}" >> .env
           echo "EXPO_PUBLIC_BACKEND_URL=${{ secrets.EXPO_PUBLIC_BACKEND_URL }}" >> .env
 
-      - name: Generate Native Android Directory
-        run: npx expo prebuild --platform android --clean
+      - name: Prebuild Android (incremental)
+        run: npx expo prebuild --platform android
 
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v3
 
       - name: Compile Release APK
         env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=\"-Xmx4096m -XX:MaxMetaspaceSize=1024m\""
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=\"-Xmx4096m -XX:MaxMetaspaceSize=1024m\" -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
         run: |
           cd android
-          ./gradlew assembleRelease -x lint -x lintVitalAnalyzeRelease -x lintVitalRelease
+          ./gradlew assembleRelease -x lint -x lintVitalAnalyzeRelease -x lintVitalRelease --build-cache
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
