@@ -36,11 +36,11 @@
           "imageWidth": 76
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      "expo-asset"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},
