@@ -8,7 +8,8 @@
     "scheme": "trackall",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.anonymous.Track-all"
     },
     "jsEngine": "hermes",
     "android": {
@@ -18,7 +19,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false,
       "package": "com.anonymous.Track_all",
       "jsEngine": "hermes"
     },
@@ -36,11 +36,11 @@
           "imageWidth": 76
         }
       ],
-      "expo-background-task"
+      "expo-background-task",
+      "expo-asset"
     ],
     "experiments": {
-      "typedRoutes": true,
-      "reactCompiler": true
+      "typedRoutes": true
     },
     "extra": {
       "router": {},
