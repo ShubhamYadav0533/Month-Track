@@ -36,12 +36,13 @@ jobs:
 
       - name: Create .env file
         run: |
-          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}" >> .env
-          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}" >> .env
-          echo "EXPO_PUBLIC_BACKEND_URL=${{ secrets.EXPO_PUBLIC_BACKEND_URL }}" >> .env
+          echo "EXPO_PUBLIC_SUPABASE_URL=${{ secrets.EXPO_PUBLIC_SUPABASE_URL || 'https://kgjixulwpzurcedwwnor.supabase.co' }}" > .env
+          echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnaml4dWx3cHp1cmNlZHw3d3JvciIsInJvbGUiOiJhbm9uIiwiaWF0IjoxNzg1OTI0Nzc0LCJleHAiOjIxMDE1MDA3NzR9.AyR8ajQAmQ0BR8Qh7pEj57wli2AVk74Ll9JQoj1rW-o' }}" >> .env
+          echo "EXPO_PUBLIC_BACKEND_URL=${{ secrets.EXPO_PUBLIC_BACKEND_URL || 'https://month-track.onrender.com/api' }}" >> .env
 
-      - name: Prebuild Android (incremental)
-        run: npx expo prebuild --platform android
+      - name: Expo Prebuild (if needed)
+        run: npx expo prebuild --platform android --clean
+
 
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v3
