@@ -29,9 +29,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
+      - name: Cache Node Modules
+        id: node-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
+        if: steps.node-cache.outputs.cache-hit != 'true'
         run: npm ci --legacy-peer-deps
 
       - name: Create .env file
@@ -41,26 +50,36 @@ jobs:
           echo "EXPO_PUBLIC_BACKEND_URL=${{ secrets.EXPO_PUBLIC_BACKEND_URL || 'https://month-track.onrender.com/api' }}" >> .env
 
       - name: Expo Prebuild
-        run: npx expo prebuild --platform android --clean
+        run: npx expo prebuild --platform android
+
+      - name: Enable ABI Splits for Minimal APK Size (~14MB each)
+        run: |
+          node -e '
+            const fs = require("fs");
+            const file = "android/app/build.gradle";
+            let content = fs.readFileSync(file, "utf8");
+            if (!content.includes("splits {")) {
+              content = content.replace("android {", `android {\n    splits {\n        abi {\n            reset()\n            enable true\n            universalApk true\n            include "armeabi-v7a", "arm64-v8a"\n        }\n    }`);
+              fs.writeFileSync(file, content);
+            }
+          '
 
       - name: Setup Gradle Cache
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Compile Android Debug & Release APKs
+      - name: Fast Compile Release APKs
         env:
           GRADLE_OPTS: "-Dorg.gradle.jvmargs=\"-Xmx4096m -XX:MaxMetaspaceSize=1024m\" -Dorg.gradle.parallel=true -Dorg.gradle.caching=true"
         run: |
           cd android
-          ./gradlew assembleDebug assembleRelease -x lint -x lintVitalAnalyzeRelease -x lintVitalRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86,x86_64
+          ./gradlew assembleRelease \
+            --build-cache --parallel \
+            -x lint -x lintVitalAnalyzeRelease -x lintVitalRelease \
+            -Pandroid.enableProguardInReleaseBuilds=true \
+            -Pandroid.enableShrinkResourcesInReleaseBuilds=true
 
-      - name: Upload Debug APK (Recommended for all Android phones)
+      - name: Upload Small Individual APKs (arm64-v8a ~15MB, armeabi-v7a ~13MB, universal)
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: app-apks
+          path: android/app/build/outputs/apk/release/*.apk
