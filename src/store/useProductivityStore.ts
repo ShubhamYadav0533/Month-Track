@@ -14,6 +14,19 @@ import {
   scheduleLocalNotification,
   cancelScheduledNotification,
 } from '../services/notificationService';
+import { generateId } from '../utils/generateId';
+import { useFinanceStore } from './useFinanceStore';
+import {
+  saveHabitToSupabase,
+  deleteHabitFromSupabase,
+  saveCalendarEventToSupabase,
+  deleteCalendarEventFromSupabase,
+  saveReminderToSupabase,
+  deleteReminderFromSupabase,
+  saveNotificationToSupabase,
+  savePlannerSlotToSupabase,
+  deletePlannerSlotFromSupabase,
+} from '../services/supabaseService';
 
 interface ProductivityState {
   enhancedTasks: EnhancedTask[];
@@ -70,7 +83,7 @@ const INITIAL_CONFIG: NotificationConfig = {
 
 const INITIAL_HABITS: HabitItem[] = [
   {
-    id: 'h_1',
+    id: '00000000-0000-4000-b000-000000000001',
     title: 'Drink 3L Water',
     icon: 'droplet',
     color: '#06b6d4',
@@ -84,7 +97,7 @@ const INITIAL_HABITS: HabitItem[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'h_2',
+    id: '00000000-0000-4000-b000-000000000002',
     title: 'Morning Walk / Exercise',
     icon: 'activity',
     color: '#10b981',
@@ -96,7 +109,7 @@ const INITIAL_HABITS: HabitItem[] = [
     createdAt: new Date().toISOString(),
   },
   {
-    id: 'h_3',
+    id: '00000000-0000-4000-b000-000000000003',
     title: 'Read Book 20 mins',
     icon: 'book',
     color: '#8b5cf6',
@@ -110,13 +123,13 @@ const INITIAL_HABITS: HabitItem[] = [
 ];
 
 const INITIAL_PLANNER: DailyPlannerSlot[] = [
-  { id: 'p_1', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '06:00 AM', activity: 'Morning Walk & Refreshments', completed: true },
-  { id: 'p_2', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '08:00 AM', activity: 'Healthy Breakfast & News', completed: true },
-  { id: 'p_3', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '09:00 AM', activity: 'Office Work / Deep Coding Session', completed: false },
-  { id: 'p_4', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '01:00 PM', activity: 'Lunch Break', completed: false },
-  { id: 'p_5', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '06:00 PM', activity: 'Evening Gym / Fitness Session', completed: false },
-  { id: 'p_6', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '09:00 PM', activity: 'Dinner & Relaxation', completed: false },
-  { id: 'p_7', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '11:00 PM', activity: 'Sleep', completed: false },
+  { id: '00000000-0000-4000-c000-000000000001', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '06:00 AM', activity: 'Morning Walk & Refreshments', completed: true },
+  { id: '00000000-0000-4000-c000-000000000002', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '08:00 AM', activity: 'Healthy Breakfast & News', completed: true },
+  { id: '00000000-0000-4000-c000-000000000003', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '09:00 AM', activity: 'Office Work / Deep Coding Session', completed: false },
+  { id: '00000000-0000-4000-c000-000000000004', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '01:00 PM', activity: 'Lunch Break', completed: false },
+  { id: '00000000-0000-4000-c000-000000000005', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '06:00 PM', activity: 'Evening Gym / Fitness Session', completed: false },
+  { id: '00000000-0000-4000-c000-000000000006', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '09:00 PM', activity: 'Dinner & Relaxation', completed: false },
+  { id: '00000000-0000-4000-c000-000000000007', plannerDate: new Date().toISOString().slice(0, 10), timeSlot: '11:00 PM', activity: 'Sleep', completed: false },
 ];
 
 export const useProductivityStore = create<ProductivityState>()(
@@ -129,7 +142,7 @@ export const useProductivityStore = create<ProductivityState>()(
       dailyPlanner: INITIAL_PLANNER,
       notifications: [
         {
-          id: 'n_1',
+          id: '00000000-0000-4000-d000-000000000001',
           title: '💰 Expense Reminder',
           body: 'Pay Internet Bill ₹899 due today',
           status: 'unread',
@@ -141,7 +154,7 @@ export const useProductivityStore = create<ProductivityState>()(
 
       // Task Actions
       addEnhancedTask: async (taskData) => {
-        const id = 'task_' + Date.now();
+        const id = generateId();
         const now = new Date().toISOString();
 
         let notifId: string | undefined;
@@ -226,9 +239,12 @@ export const useProductivityStore = create<ProductivityState>()(
 
       // Reminder Actions
       addReminder: async (reminderData) => {
-        const id = 'rem_' + Date.now();
+        const id = generateId();
+        const newReminder = { ...reminderData, id };
+        const userId = useFinanceStore.getState().profile.id;
+        saveReminderToSupabase(userId, newReminder);
         set((state) => ({
-          reminders: [{ ...reminderData, id }, ...state.reminders],
+          reminders: [newReminder, ...state.reminders],
         }));
       },
 
@@ -237,6 +253,7 @@ export const useProductivityStore = create<ProductivityState>()(
         if (rem?.notificationId) {
           await cancelScheduledNotification(rem.notificationId);
         }
+        deleteReminderFromSupabase(id);
         set((state) => ({
           reminders: state.reminders.filter((r) => r.id !== id),
         }));
@@ -252,7 +269,7 @@ export const useProductivityStore = create<ProductivityState>()(
 
       // Habit Actions
       addHabit: (habitData) => {
-        const id = 'h_' + Date.now();
+        const id = generateId();
         const newHabit: HabitItem = {
           ...habitData,
           id,
@@ -261,12 +278,14 @@ export const useProductivityStore = create<ProductivityState>()(
           completedDays: [],
           createdAt: new Date().toISOString(),
         };
+        const userId = useFinanceStore.getState().profile.id;
+        saveHabitToSupabase(userId, newHabit);
         set((state) => ({ habits: [...state.habits, newHabit] }));
       },
 
       toggleHabitForDate: (habitId, dateStr) => {
-        set((state) => ({
-          habits: state.habits.map((h) => {
+        set((state) => {
+          const updatedHabits = state.habits.map((h) => {
             if (h.id !== habitId) return h;
             const exists = h.completedDays.includes(dateStr);
             const updatedDays = exists
@@ -282,11 +301,18 @@ export const useProductivityStore = create<ProductivityState>()(
               currentStreak,
               bestStreak,
             };
-          }),
-        }));
+          });
+          const updated = updatedHabits.find((h) => h.id === habitId);
+          if (updated) {
+            const userId = useFinanceStore.getState().profile.id;
+            saveHabitToSupabase(userId, updated);
+          }
+          return { habits: updatedHabits };
+        });
       },
 
       deleteHabit: (habitId) => {
+        deleteHabitFromSupabase(habitId);
         set((state) => ({
           habits: state.habits.filter((h) => h.id !== habitId),
         }));
@@ -294,26 +320,35 @@ export const useProductivityStore = create<ProductivityState>()(
 
       // Calendar Event Actions
       addCalendarEvent: (eventData) => {
-        const id = 'evt_' + Date.now();
+        const id = generateId();
         const newEvt: CalendarEventItem = {
           ...eventData,
           id,
           createdAt: new Date().toISOString(),
         };
+        const userId = useFinanceStore.getState().profile.id;
+        saveCalendarEventToSupabase(userId, newEvt);
         set((state) => ({
           calendarEvents: [...state.calendarEvents, newEvt],
         }));
       },
 
       updateCalendarEvent: (id, updates) => {
-        set((state) => ({
-          calendarEvents: state.calendarEvents.map((e) =>
+        set((state) => {
+          const updatedEvents = state.calendarEvents.map((e) =>
             e.id === id ? { ...e, ...updates } : e
-          ),
-        }));
+          );
+          const updated = updatedEvents.find((e) => e.id === id);
+          if (updated) {
+            const userId = useFinanceStore.getState().profile.id;
+            saveCalendarEventToSupabase(userId, updated);
+          }
+          return { calendarEvents: updatedEvents };
+        });
       },
 
       deleteCalendarEvent: (id) => {
+        deleteCalendarEventFromSupabase(id);
         set((state) => ({
           calendarEvents: state.calendarEvents.filter((e) => e.id !== id),
         }));
@@ -321,9 +356,12 @@ export const useProductivityStore = create<ProductivityState>()(
 
       // Daily Planner Actions
       addPlannerSlot: (slotData) => {
-        const id = 'p_' + Date.now();
+        const id = generateId();
+        const newSlot = { ...slotData, id };
+        const userId = useFinanceStore.getState().profile.id;
+        savePlannerSlotToSupabase(userId, newSlot);
         set((state) => ({
-          dailyPlanner: [...state.dailyPlanner, { ...slotData, id }],
+          dailyPlanner: [...state.dailyPlanner, newSlot],
         }));
       },
 
@@ -336,6 +374,7 @@ export const useProductivityStore = create<ProductivityState>()(
       },
 
       deletePlannerSlot: (id) => {
+        deletePlannerSlotFromSupabase(id);
         set((state) => ({
           dailyPlanner: state.dailyPlanner.filter((s) => s.id !== id),
         }));
@@ -343,12 +382,14 @@ export const useProductivityStore = create<ProductivityState>()(
 
       // Notification Actions
       addNotificationRecord: (notifData) => {
-        const id = 'n_' + Date.now();
+        const id = generateId();
         const newNotif: NotificationRecord = {
           ...notifData,
           id,
           sentAt: new Date().toISOString(),
         };
+        const userId = useFinanceStore.getState().profile.id;
+        saveNotificationToSupabase(userId, newNotif);
         set((state) => ({
           notifications: [newNotif, ...state.notifications],
         }));

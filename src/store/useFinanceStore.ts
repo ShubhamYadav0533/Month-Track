@@ -13,18 +13,23 @@ import {
   ExpenseCategory,
   TaskItem,
   BillItem,
-  TransactionType,
   PaymentMethod,
 } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
+import { generateId } from '../utils/generateId';
 import {
   saveUserToSupabase,
   saveAccountsToSupabase,
-  saveExpenseToSupabase,
-  deleteExpenseFromSupabase,
+  saveTransactionToSupabase,
+  deleteTransactionFromSupabase,
   fetchFullUserDataFromSupabase,
   saveBudgetToSupabase,
   saveSavingsGoalToSupabase,
+  deleteSavingsGoalFromSupabase,
+  saveTaskToSupabase,
+  deleteTaskFromSupabase,
+  saveBillToSupabase,
+  deleteBillFromSupabase,
 } from '../services/supabaseService';
 
 interface FinanceState {
@@ -93,8 +98,15 @@ interface FinanceState {
   resetAllData: () => void;
 }
 
+// Fixed UUIDs for default entities (deterministic so they stay consistent across reloads)
+const DEFAULT_USER_ID = '00000000-0000-4000-a000-000000000001';
+const DEFAULT_ACC_WALLET = '00000000-0000-4000-a000-000000000010';
+const DEFAULT_ACC_BANK   = '00000000-0000-4000-a000-000000000011';
+const DEFAULT_ACC_UPI    = '00000000-0000-4000-a000-000000000012';
+const DEFAULT_ACC_CARD   = '00000000-0000-4000-a000-000000000013';
+
 const DEFAULT_PROFILE: UserProfile = {
-  id: 'user_1',
+  id: DEFAULT_USER_ID,
   name: 'User',
   monthlyIncome: 0,
   salaryDate: 1,
@@ -105,10 +117,10 @@ const DEFAULT_PROFILE: UserProfile = {
 };
 
 const INITIAL_ACCOUNTS: Account[] = [
-  { id: 'acc_wallet', name: 'Wallet Cash', type: 'wallet', balance: 0, icon: 'wallet', color: '#10b981' },
-  { id: 'acc_bank', name: 'Bank Balance', type: 'bank', balance: 0, icon: 'building', color: '#3b82f6' },
-  { id: 'acc_upi', name: 'UPI / GPay', type: 'upi', balance: 0, icon: 'smartphone', color: '#8b5cf6' },
-  { id: 'acc_card', name: 'Credit Card', type: 'card', balance: 0, creditLimit: 0, icon: 'credit-card', color: '#f59e0b' },
+  { id: DEFAULT_ACC_WALLET, name: 'Wallet Cash', type: 'wallet', balance: 0, icon: 'wallet', color: '#10b981' },
+  { id: DEFAULT_ACC_BANK, name: 'Bank Balance', type: 'bank', balance: 0, icon: 'building', color: '#3b82f6' },
+  { id: DEFAULT_ACC_UPI, name: 'UPI / GPay', type: 'upi', balance: 0, icon: 'smartphone', color: '#8b5cf6' },
+  { id: DEFAULT_ACC_CARD, name: 'Credit Card', type: 'card', balance: 0, creditLimit: 0, icon: 'credit-card', color: '#f59e0b' },
 ];
 
 const INITIAL_TASKS: TaskItem[] = [];
@@ -141,21 +153,7 @@ export const useFinanceStore = create<FinanceState>()(
         const res = await fetchFullUserDataFromSupabase(userId);
         if (res.success && res.profile) {
           set((state) => {
-            const fetchedTxs: Transaction[] = res.expenses.map((e: any) => ({
-              id: e.id,
-              title: e.description || e.category,
-              description: e.description || e.category,
-              amount: parseFloat(e.amount),
-              type: (e.paymentMethod === 'Income' ? 'Income' : 'Expense') as TransactionType,
-              category: e.category,
-              accountId: e.accountId,
-              paymentMethod: e.paymentMethod,
-              transactionDate: e.expenseDate || getFormattedDate(),
-              expenseDate: e.expenseDate || getFormattedDate(),
-              createdAt: e.createdAt,
-              location: e.location,
-              attachment: e.receiptUrl,
-            }));
+            const fetchedTxs: Transaction[] = res.transactions || [];
 
             return {
               profile: {
@@ -198,10 +196,10 @@ export const useFinanceStore = create<FinanceState>()(
         };
 
         const newAccounts: Account[] = [
-          { id: 'acc_wallet', name: 'Wallet Cash', type: 'wallet', balance: walletBal, icon: 'wallet', color: '#10b981' },
-          { id: 'acc_bank', name: 'Bank Balance', type: 'bank', balance: bankBal, icon: 'building', color: '#3b82f6' },
-          { id: 'acc_upi', name: 'UPI Balance', type: 'upi', balance: upiBal, icon: 'smartphone', color: '#8b5cf6' },
-          { id: 'acc_card', name: 'Credit Card', type: 'card', balance: 0, creditLimit: cardLimit, icon: 'credit-card', color: '#f59e0b' },
+          { id: DEFAULT_ACC_WALLET, name: 'Wallet Cash', type: 'wallet', balance: walletBal, icon: 'wallet', color: '#10b981' },
+          { id: DEFAULT_ACC_BANK, name: 'Bank Balance', type: 'bank', balance: bankBal, icon: 'building', color: '#3b82f6' },
+          { id: DEFAULT_ACC_UPI, name: 'UPI Balance', type: 'upi', balance: upiBal, icon: 'smartphone', color: '#8b5cf6' },
+          { id: DEFAULT_ACC_CARD, name: 'Credit Card', type: 'card', balance: 0, creditLimit: cardLimit, icon: 'credit-card', color: '#f59e0b' },
         ];
 
         set({
@@ -222,7 +220,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       addTransaction: (txData) => {
-        const id = `tx_${Date.now()}`;
+        const id = generateId();
         const dateStr = txData.transactionDate || (txData as any).expenseDate || getFormattedDate();
         const titleStr = txData.title || (txData as any).description || `${txData.type || 'Expense'}: ${txData.category}`;
 
@@ -251,7 +249,7 @@ export const useFinanceStore = create<FinanceState>()(
           });
 
           const updatedTxs = [newTx, ...state.transactions];
-          saveExpenseToSupabase(state.profile.id, newTx);
+          saveTransactionToSupabase(state.profile.id, newTx);
           saveAccountsToSupabase(state.profile.id, updatedAccounts);
 
           return {
@@ -286,7 +284,7 @@ export const useFinanceStore = create<FinanceState>()(
             });
           }
 
-          deleteExpenseFromSupabase(id);
+          deleteTransactionFromSupabase(id);
           saveAccountsToSupabase(state.profile.id, updatedAccounts);
 
           const filtered = state.transactions.filter((t) => t.id !== id);
@@ -311,10 +309,13 @@ export const useFinanceStore = create<FinanceState>()(
       addTask: (taskData) => {
         const newTask: TaskItem = {
           ...taskData,
-          id: `task_${Date.now()}`,
+          id: generateId(),
           createdAt: new Date().toISOString(),
         };
-        set((state) => ({ tasks: [newTask, ...state.tasks] }));
+        set((state) => {
+          saveTaskToSupabase(state.profile.id, newTask);
+          return { tasks: [newTask, ...state.tasks] };
+        });
       },
 
       toggleTaskCompleted: (id) => {
@@ -324,22 +325,29 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       deleteTask: (id) => {
+        deleteTaskFromSupabase(id);
         set((state) => ({ tasks: state.tasks.filter((t) => t.id !== id) }));
       },
 
       updateTask: (id, taskData) => {
-        set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, ...taskData } : t)),
-        }));
+        set((state) => {
+          const updatedTasks = state.tasks.map((t) => (t.id === id ? { ...t, ...taskData } : t));
+          const updated = updatedTasks.find((t) => t.id === id);
+          if (updated) saveTaskToSupabase(state.profile.id, updated);
+          return { tasks: updatedTasks };
+        });
       },
 
       addBill: (billData) => {
         const newBill: BillItem = {
           ...billData,
-          id: `bill_${Date.now()}`,
+          id: generateId(),
           createdAt: new Date().toISOString(),
         };
-        set((state) => ({ bills: [newBill, ...state.bills] }));
+        set((state) => {
+          saveBillToSupabase(state.profile.id, newBill);
+          return { bills: [newBill, ...state.bills] };
+        });
       },
 
       toggleBillStatus: (id) => {
@@ -368,6 +376,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       deleteBill: (id) => {
+        deleteBillFromSupabase(id);
         set((state) => ({ bills: state.bills.filter((b) => b.id !== id) }));
       },
 
@@ -394,7 +403,7 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       addSavingsGoal: (goalData) => {
-        const newGoal: SavingsGoal = { ...goalData, id: `goal_${Date.now()}` };
+        const newGoal: SavingsGoal = { ...goalData, id: generateId() };
         set((state) => {
           saveSavingsGoalToSupabase(state.profile.id, newGoal);
           return { savingsGoals: [...state.savingsGoals, newGoal] };
@@ -416,11 +425,12 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       deleteSavingsGoal: (id) => {
+        deleteSavingsGoalFromSupabase(id);
         set((state) => ({ savingsGoals: state.savingsGoals.filter((g) => g.id !== id) }));
       },
 
       addRecurringTransaction: (recData) => {
-        const newRec: RecurringTransaction = { ...recData, id: `rec_${Date.now()}` };
+        const newRec: RecurringTransaction = { ...recData, id: generateId() };
         set((state) => ({ recurring: [...state.recurring, newRec] }));
       },
 
@@ -433,7 +443,7 @@ export const useFinanceStore = create<FinanceState>()(
           state.recurring.forEach((rec) => {
             if (rec.autoDeduct && rec.nextDueDate <= todayStr) {
               const newTx: Transaction = {
-                id: `tx_auto_${Date.now()}_${rec.id}`,
+                id: generateId(),
                 title: `Auto-Deduct: ${rec.title}`,
                 amount: rec.amount,
                 type: 'Expense',
@@ -446,7 +456,7 @@ export const useFinanceStore = create<FinanceState>()(
               };
 
               updatedTxs.unshift(newTx);
-              saveExpenseToSupabase(state.profile.id, newTx);
+              saveTransactionToSupabase(state.profile.id, newTx);
 
               updatedAccounts = updatedAccounts.map((a) =>
                 a.id === rec.accountId ? { ...a, balance: Math.max(0, a.balance - rec.amount) } : a
@@ -462,7 +472,7 @@ export const useFinanceStore = create<FinanceState>()(
       addSplitExpense: (splitData) => {
         const newSplit: SplitExpense = {
           ...splitData,
-          id: `split_${Date.now()}`,
+          id: generateId(),
           createdAt: new Date().toISOString(),
         };
         set((state) => ({ splitExpenses: [newSplit, ...state.splitExpenses] }));
