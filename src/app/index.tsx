@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, ScrollView } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { SecurityLockScreen } from '../components/SecurityLockScreen';
@@ -36,6 +36,26 @@ export default function MainApp() {
   const { profile, isLocked } = useFinanceStore();
   const [currentTab, setCurrentTab] = useState<UnifiedTab>('dashboard');
 
+  const appMode = profile.defaultAppMode || 'finance';
+
+  const allTabs: { id: UnifiedTab; label: string; icon: React.ReactNode; mode?: 'finance' | 'hrms' | 'all' }[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} color={currentTab === 'dashboard' ? '#10b981' : '#64748b'} />, mode: 'all' },
+    { id: 'expenses', label: 'Expenses', icon: <DollarSign size={20} color={currentTab === 'expenses' ? '#10b981' : '#64748b'} />, mode: 'finance' },
+    { id: 'attendance', label: 'Attendance', icon: <Clock size={20} color={currentTab === 'attendance' ? '#10b981' : '#64748b'} />, mode: 'hrms' },
+    { id: 'tasks', label: 'Tasks', icon: <CheckSquare size={20} color={currentTab === 'tasks' ? '#10b981' : '#64748b'} />, mode: 'hrms' },
+    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon size={20} color={currentTab === 'calendar' ? '#10b981' : '#64748b'} />, mode: 'all' },
+    { id: 'notifications', label: 'Notifications', icon: <Bell size={20} color={currentTab === 'notifications' ? '#10b981' : '#64748b'} />, mode: 'all' },
+    { id: 'profile', label: 'Profile', icon: <User size={20} color={currentTab === 'profile' ? '#10b981' : '#64748b'} />, mode: 'all' },
+  ];
+
+  const unifiedTabs = allTabs.filter(t => t.mode === 'all' || t.mode === appMode);
+
+  useEffect(() => {
+    if (!unifiedTabs.some(t => t.id === currentTab)) {
+      setCurrentTab('dashboard');
+    }
+  }, [appMode]);
+
   // Guard 1: Passcode Security Lock
   if (isLocked) {
     return <SecurityLockScreen />;
@@ -45,16 +65,6 @@ export default function MainApp() {
   if (!profile.isSetupComplete) {
     return <SetupWizard />;
   }
-
-  const unifiedTabs: { id: UnifiedTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} color={currentTab === 'dashboard' ? '#10b981' : '#64748b'} /> },
-    { id: 'tasks', label: 'Tasks', icon: <CheckSquare size={20} color={currentTab === 'tasks' ? '#10b981' : '#64748b'} /> },
-    { id: 'expenses', label: 'Expenses', icon: <DollarSign size={20} color={currentTab === 'expenses' ? '#10b981' : '#64748b'} /> },
-    { id: 'attendance', label: 'Attendance', icon: <Clock size={20} color={currentTab === 'attendance' ? '#10b981' : '#64748b'} /> },
-    { id: 'calendar', label: 'Calendar', icon: <CalendarIcon size={20} color={currentTab === 'calendar' ? '#10b981' : '#64748b'} /> },
-    { id: 'notifications', label: 'Notifications', icon: <Bell size={20} color={currentTab === 'notifications' ? '#10b981' : '#64748b'} /> },
-    { id: 'profile', label: 'Profile', icon: <User size={20} color={currentTab === 'profile' ? '#10b981' : '#64748b'} /> },
-  ];
 
   return (
     <SafeAreaView style={styles.container}>

@@ -97,121 +97,129 @@ export function UnifiedDashboard() {
 
         {/* Quick Highlights Banner */}
         <View style={styles.bannerGrid}>
-          {/* Today Expenses */}
-          <View style={[styles.bannerCard, { borderLeftColor: '#ef4444' }]}>
-            <View style={styles.bannerIconRow}>
-              <DollarSign size={18} color="#ef4444" />
-              <Text style={styles.bannerLabel}>Today Expenses</Text>
-            </View>
-            <Text style={[styles.bannerVal, { color: '#ef4444' }]}>₹{todayExpenses.toLocaleString()}</Text>
-            <Text style={styles.bannerSub}>{transactions.length} total transactions</Text>
-          </View>
-
-          {/* Today Attendance */}
-          <View style={[styles.bannerCard, { borderLeftColor: '#10b981' }]}>
-            <View style={styles.bannerIconRow}>
-              <Clock size={18} color="#10b981" />
-              <Text style={styles.bannerLabel}>Attendance</Text>
-            </View>
-            <Text style={[styles.bannerVal, { color: '#10b981' }]}>{todayStatus}</Text>
-            <Text style={styles.bannerSub}>
-              {todayRecord ? `Worked ${formatMinutesToHM(liveWorkMins)}` : `${shift.startTime} shift`}
-            </Text>
-          </View>
-        </View>
-
-        {/* Pending Work & Tasks Quick Bar */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>✅ Today Tasks</Text>
-          <Text style={styles.sectionBadge}>{todayTasksList.length} pending</Text>
-        </View>
-        {todayTasksList.length === 0 ? (
-          <View style={styles.emptyCard}>
-            <Sparkles size={28} color="#10b981" />
-            <Text style={styles.emptyText}>All caught up! No pending tasks.</Text>
-          </View>
-        ) : (
-          <View style={styles.tasksContainer}>
-            {todayTasksList.slice(0, 3).map((task) => (
-              <View key={task.id} style={styles.taskItemRow}>
-                <View
-                  style={[
-                    styles.priorityDot,
-                    {
-                      backgroundColor:
-                        task.priority === 'Critical'
-                          ? '#ef4444'
-                          : task.priority === 'High'
-                          ? '#f59e0b'
-                          : '#3b82f6',
-                    },
-                  ]}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.taskTitle}>{task.title}</Text>
-                  <Text style={styles.taskMeta}>
-                    Due: {task.dueDate} {task.dueTime ? `· ${task.dueTime}` : ''}
-                  </Text>
-                </View>
-                <View style={styles.taskCategoryBadge}>
-                  <Text style={styles.taskCategoryText}>{task.category || 'General'}</Text>
-                </View>
+          {/* Today Expenses (Finance Mode) */}
+          {(profile.defaultAppMode || 'finance') === 'finance' && (
+            <View style={[styles.bannerCard, { borderLeftColor: '#ef4444' }]}>
+              <View style={styles.bannerIconRow}>
+                <DollarSign size={18} color="#ef4444" />
+                <Text style={styles.bannerLabel}>Today Expenses</Text>
               </View>
-            ))}
-          </View>
-        )}
+              <Text style={[styles.bannerVal, { color: '#ef4444' }]}>₹{todayExpenses.toLocaleString()}</Text>
+              <Text style={styles.bannerSub}>{transactions.length} total transactions</Text>
+            </View>
+          )}
 
-        {/* Today Schedule Timeline */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>📅 Today Schedule</Text>
-        </View>
-        <View style={styles.scheduleCard}>
-          {todaySchedule.slice(0, 4).map((slot) => (
-            <View key={slot.id} style={styles.slotRow}>
-              <Text style={styles.slotTime}>{slot.timeSlot}</Text>
-              <View style={[styles.slotDot, slot.completed && styles.slotDotDone]} />
-              <Text style={[styles.slotActivity, slot.completed && styles.slotActivityDone]}>
-                {slot.activity}
+          {/* Today Attendance (HRMS Mode) */}
+          {profile.defaultAppMode === 'hrms' && (
+            <View style={[styles.bannerCard, { borderLeftColor: '#10b981' }]}>
+              <View style={styles.bannerIconRow}>
+                <Clock size={18} color="#10b981" />
+                <Text style={styles.bannerLabel}>Attendance</Text>
+              </View>
+              <Text style={[styles.bannerVal, { color: '#10b981' }]}>{todayStatus}</Text>
+              <Text style={styles.bannerSub}>
+                {todayRecord ? `Worked ${formatMinutesToHM(liveWorkMins)}` : `${shift.startTime} shift`}
               </Text>
             </View>
-          ))}
+          )}
         </View>
 
-        {/* Habit Streak Tracker */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>🔥 Habit Tracker</Text>
-        </View>
-        <View style={styles.habitsGrid}>
-          {todayHabits.map((habit) => (
-            <View key={habit.id} style={styles.habitCard}>
-              <View style={[styles.habitIconBg, { backgroundColor: habit.color + '20' }]}>
-                <Flame size={18} color={habit.color} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.habitTitle}>{habit.title}</Text>
-                <Text style={styles.habitStreak}>{habit.currentStreak} day streak 🔥</Text>
-              </View>
-              <View
-                style={[
-                  styles.habitStatusChip,
-                  habit.isCompletedToday && { backgroundColor: '#10b981' },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.habitStatusText,
-                    habit.isCompletedToday && { color: '#ffffff' },
-                  ]}
-                >
-                  {habit.isCompletedToday ? 'Done ✓' : 'Pending'}
-                </Text>
-              </View>
+        {/* Pending Work & Tasks Quick Bar (HRMS Mode) */}
+        {profile.defaultAppMode === 'hrms' && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>✅ Today Tasks</Text>
+              <Text style={styles.sectionBadge}>{todayTasksList.length} pending</Text>
             </View>
-          ))}
-        </View>
+            {todayTasksList.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Sparkles size={28} color="#10b981" />
+                <Text style={styles.emptyText}>All caught up! No pending tasks.</Text>
+              </View>
+            ) : (
+              <View style={styles.tasksContainer}>
+                {todayTasksList.slice(0, 3).map((task) => (
+                  <View key={task.id} style={styles.taskItemRow}>
+                    <View
+                      style={[
+                        styles.priorityDot,
+                        {
+                          backgroundColor:
+                            task.priority === 'Critical'
+                              ? '#ef4444'
+                              : task.priority === 'High'
+                              ? '#f59e0b'
+                              : '#3b82f6',
+                        },
+                      ]}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.taskTitle}>{task.title}</Text>
+                      <Text style={styles.taskMeta}>
+                        Due: {task.dueDate} {task.dueTime ? `· ${task.dueTime}` : ''}
+                      </Text>
+                    </View>
+                    <View style={styles.taskCategoryBadge}>
+                      <Text style={styles.taskCategoryText}>{task.category || 'General'}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
 
-        {/* Pending Bills & EMI */}
-        {pendingBills.length > 0 && (
+            {/* Today Schedule Timeline */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>📅 Today Schedule</Text>
+            </View>
+            <View style={styles.scheduleCard}>
+              {todaySchedule.slice(0, 4).map((slot) => (
+                <View key={slot.id} style={styles.slotRow}>
+                  <Text style={styles.slotTime}>{slot.timeSlot}</Text>
+                  <View style={[styles.slotDot, slot.completed && styles.slotDotDone]} />
+                  <Text style={[styles.slotActivity, slot.completed && styles.slotActivityDone]}>
+                    {slot.activity}
+                  </Text>
+                </View>
+              ))}
+            </View>
+
+            {/* Habit Streak Tracker */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>🔥 Habit Tracker</Text>
+            </View>
+            <View style={styles.habitsGrid}>
+              {todayHabits.map((habit) => (
+                <View key={habit.id} style={styles.habitCard}>
+                  <View style={[styles.habitIconBg, { backgroundColor: habit.color + '20' }]}>
+                    <Flame size={18} color={habit.color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.habitTitle}>{habit.title}</Text>
+                    <Text style={styles.habitStreak}>{habit.currentStreak} day streak 🔥</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.habitStatusChip,
+                      habit.isCompletedToday && { backgroundColor: '#10b981' },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.habitStatusText,
+                        habit.isCompletedToday && { color: '#ffffff' },
+                      ]}
+                    >
+                      {habit.isCompletedToday ? 'Done ✓' : 'Pending'}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Pending Bills & EMI (Finance Mode) */}
+        {(profile.defaultAppMode || 'finance') === 'finance' && pendingBills.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>💳 Upcoming Bills & EMI</Text>
