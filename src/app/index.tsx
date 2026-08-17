@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -50,12 +50,7 @@ export default function MainApp() {
   ];
 
   const unifiedTabs = allTabs.filter(t => t.mode === 'all' || t.mode === appMode);
-
-  useEffect(() => {
-    if (!unifiedTabs.some(t => t.id === currentTab)) {
-      setCurrentTab('dashboard');
-    }
-  }, [appMode]);
+  const activeTab = unifiedTabs.some(t => t.id === currentTab) ? currentTab : 'dashboard';
 
   // Guard 1: Passcode Security Lock
   if (isLocked) {
@@ -73,13 +68,13 @@ export default function MainApp() {
 
       {/* Screen Content Render */}
       <View style={styles.content}>
-        {currentTab === 'dashboard' && <UnifiedDashboard />}
-        {currentTab === 'tasks' && <EnhancedTasksScreen />}
-        {currentTab === 'expenses' && <TransactionsScreen />}
-        {currentTab === 'attendance' && <AttendanceDashboard />}
-        {currentTab === 'calendar' && <CalendarScreen />}
-        {currentTab === 'notifications' && <NotificationsScreen />}
-        {currentTab === 'profile' && <SettingsExportScreen />}
+        {activeTab === 'dashboard' && <UnifiedDashboard />}
+        {activeTab === 'tasks' && <EnhancedTasksScreen />}
+        {activeTab === 'expenses' && <TransactionsScreen />}
+        {activeTab === 'attendance' && <AttendanceDashboard />}
+        {activeTab === 'calendar' && <CalendarScreen />}
+        {activeTab === 'notifications' && <NotificationsScreen />}
+        {activeTab === 'profile' && <SettingsExportScreen />}
       </View>
 
       {/* Primary OS Bottom Navigation Bar */}
@@ -92,11 +87,11 @@ export default function MainApp() {
           {unifiedTabs.map((t) => (
             <TouchableOpacity
               key={t.id}
-              style={[styles.navItem, currentTab === t.id && styles.navItemActive]}
+              style={[styles.navItem, activeTab === t.id && styles.navItemActive]}
               onPress={() => setCurrentTab(t.id)}
             >
               {t.icon}
-              <Text style={[styles.navText, currentTab === t.id && styles.navTextActive]}>
+              <Text style={[styles.navText, activeTab === t.id && styles.navTextActive]}>
                 {t.label}
               </Text>
             </TouchableOpacity>

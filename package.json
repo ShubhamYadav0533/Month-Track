@@ -46,6 +46,7 @@
     "eas-cli": "^21.5.0",
     "eslint": "^8.57.0",
     "eslint-config-expo": "~8.0.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "typescript": "~5.3.3"
   },
   "scripts": {

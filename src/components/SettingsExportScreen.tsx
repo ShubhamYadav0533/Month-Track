@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   Switch,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
