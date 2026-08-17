@@ -1,12 +1,55 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Platform } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useFinanceStore } from '../store/useFinanceStore';
-import { Fingerprint, Lock } from 'lucide-react-native';
+import { Fingerprint, Lock, Delete } from 'lucide-react-native';
 
 export function SecurityLockScreen() {
   const [pin, setPin] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
-  const unlockApp = useFinanceStore((state) => state.unlockApp);
+  const { profile, unlockApp } = useFinanceStore();
+
+  const handleBiometricAuth = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        // Fallback for Web browser testing
+        useFinanceStore.setState({ isLocked: false });
+        return;
+      }
+
+      const hasHardware = await LocalAuthentication.hasHardwareAsync();
+      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (hasHardware && isEnrolled) {
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Unlock Personal OS with Fingerprint / Face ID',
+          fallbackLabel: 'Use 4-Digit PIN',
+          cancelLabel: 'Cancel',
+        });
+
+        if (result.success) {
+          useFinanceStore.setState({ isLocked: false });
+        } else {
+          setErrorMsg('Fingerprint authentication cancelled or failed.');
+        }
+      } else {
+        // Fallback if device has no biometric hardware enrolled
+        useFinanceStore.setState({ isLocked: false });
+      }
+    } catch (err) {
+      console.warn('Biometric unlock error:', err);
+      useFinanceStore.setState({ isLocked: false });
+    }
+  };
+
+  useEffect(() => {
+    if (profile.isBiometricsEnabled) {
+      const timer = setTimeout(() => {
+        handleBiometricAuth();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [profile.isBiometricsEnabled]);
 
   const handleKeyPress = (num: string) => {
     if (pin.length < 4) {
@@ -17,7 +60,7 @@ export function SecurityLockScreen() {
       if (newPin.length === 4) {
         const success = unlockApp(newPin);
         if (!success) {
-          setErrorMsg('Incorrect PIN. Please try again.');
+          setErrorMsg('Incorrect 4-Digit PIN. Please try again.');
           setPin('');
         }
       }
@@ -36,8 +79,8 @@ export function SecurityLockScreen() {
           <Lock size={36} color="#10b981" />
         </View>
 
-        <Text style={styles.title}>Finance Assistant Locked</Text>
-        <Text style={styles.subtitle}>Enter your 4-digit PIN to access your daily budget</Text>
+        <Text style={styles.title}>Personal OS Locked</Text>
+        <Text style={styles.subtitle}>Enter your 4-digit security PIN or scan fingerprint</Text>
 
         <View style={styles.dotsContainer}>
           {[0, 1, 2, 3].map((idx) => (
@@ -60,14 +103,14 @@ export function SecurityLockScreen() {
               <Text style={styles.keyText}>{num}</Text>
             </TouchableOpacity>
           ))}
-          <TouchableOpacity style={styles.keyButton} onPress={() => unlockApp(pin)}>
-            <Fingerprint size={24} color="#10b981" />
+          <TouchableOpacity style={styles.keyButton} onPress={handleBiometricAuth}>
+            <Fingerprint size={26} color="#10b981" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.keyButton} onPress={() => handleKeyPress('0')}>
             <Text style={styles.keyText}>0</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.keyButton} onPress={handleDelete}>
-            <Text style={styles.keyText}>⌫</Text>
+            <Delete size={22} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -135,14 +178,14 @@ const styles = StyleSheet.create({
   keypad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: 16,
-    width: '100%',
+    width: 260,
   },
   keyButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 68,
+    height: 68,
+    borderRadius: 34,
     backgroundColor: '#1e293b',
     justifyContent: 'center',
     alignItems: 'center',

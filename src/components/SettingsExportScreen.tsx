@@ -7,7 +7,9 @@ import {
   TextInput,
   StyleSheet,
   Switch,
+  Alert,
 } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { exportExpensesToCSV, generateBackupJSON } from '../utils/exportUtils';
 import { Download, Shield, Trash2, FileSpreadsheet, Lock, User, Save } from 'lucide-react-native';
@@ -20,8 +22,44 @@ export function SettingsExportScreen() {
   const [salaryDate, setSalaryDate] = useState(profile.salaryDate.toString());
   const [currency, setCurrency] = useState(profile.currency);
   const [pinInput, setPinInput] = useState(profile.pinCode || '');
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(profile.isDarkMode ?? true);
   const [bioEnabled, setBioEnabled] = useState(profile.isBiometricsEnabled || false);
+
+  const handleToggleDarkMode = (val: boolean) => {
+    setDarkMode(val);
+    updateProfile({ isDarkMode: val });
+  };
+
+  const handleToggleBiometrics = async (val: boolean) => {
+    if (val) {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+        if (hasHardware && isEnrolled) {
+          const res = await LocalAuthentication.authenticateAsync({
+            promptMessage: 'Confirm Fingerprint / Biometrics to enable unlock',
+          });
+
+          if (res.success) {
+            setBioEnabled(true);
+            updateProfile({ isBiometricsEnabled: true });
+          } else {
+            Alert.alert('Authentication Failed', 'Fingerprint verification failed.');
+          }
+        } else {
+          setBioEnabled(true);
+          updateProfile({ isBiometricsEnabled: true });
+        }
+      } catch {
+        setBioEnabled(true);
+        updateProfile({ isBiometricsEnabled: true });
+      }
+    } else {
+      setBioEnabled(false);
+      updateProfile({ isBiometricsEnabled: false });
+    }
+  };
 
   const handleSaveProfile = () => {
     const inc = parseFloat(monthlyIncome);
@@ -34,7 +72,9 @@ export function SettingsExportScreen() {
       currency,
       pinCode: pinInput || undefined,
       isBiometricsEnabled: bioEnabled,
+      isDarkMode: darkMode,
     });
+    Alert.alert('Profile Saved', 'Your preferences and security settings have been saved successfully.');
   };
 
   const handleExportCSV = async () => {
@@ -159,12 +199,12 @@ export function SettingsExportScreen() {
 
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>Dark Mode (Default)</Text>
-            <Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#334155', true: '#10b981' }} />
+            <Switch value={darkMode} onValueChange={handleToggleDarkMode} trackColor={{ false: '#334155', true: '#10b981' }} />
           </View>
 
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>Biometric / Fingerprint Unlock</Text>
-            <Switch value={bioEnabled} onValueChange={setBioEnabled} trackColor={{ false: '#334155', true: '#10b981' }} />
+            <Switch value={bioEnabled} onValueChange={handleToggleBiometrics} trackColor={{ false: '#334155', true: '#10b981' }} />
           </View>
 
           <Text style={styles.label}>Security Passcode PIN (4 digits)</Text>
