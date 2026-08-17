@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@opentelemetry/api": "^1.9.1",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@supabase/supabase-js": "^2.109.0",
     "expo": "~52.0.0",
@@ -43,7 +44,7 @@
     "@types/react": "~18.3.12",
     "concurrently": "^9.2.4",
     "eas-cli": "^21.5.0",
-    "eslint": "^9.0.0",
+    "eslint": "^8.57.0",
     "eslint-config-expo": "~8.0.1",
     "typescript": "~5.3.3"
   },
@@ -51,12 +52,13 @@
     "build": "cd server && npm install && npm run build",
     "server:start": "node server/dist/index.js",
     "expo:start": "expo start",
+    "web:start": "expo start --web",
     "start": "concurrently --kill-others --names \"server,expo\" --prefix-colors \"blue,green\" \"npm run server:start\" \"npm run expo:start\"",
+    "web": "concurrently --kill-others --names \"server,web\" --prefix-colors \"blue,green\" \"npm run server:start\" \"npm run web:start\"",
     "check": "npm run lint && npx tsc --noEmit && npm run build",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web",
     "lint": "expo lint",
     "type:gen": "npx -y supabase gen types typescript --project-id kgjixulwpzurcedwwnor > src/types/supabase.ts"
   },
