@@ -47,7 +47,7 @@ export function SettingsExportScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Profile & Settings</Text>
@@ -212,7 +212,7 @@ export function SettingsExportScreen() {
           <Text style={styles.resetBtnText}>Reset All Data to Default</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

@@ -10,9 +10,7 @@ export default function AppTabs() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: {
-          backgroundColor: colors.background,
-        },
+        tabBarStyle: { display: 'none' },
         tabBarActiveTintColor: colors.text,
       }}>
       <Tabs.Screen
