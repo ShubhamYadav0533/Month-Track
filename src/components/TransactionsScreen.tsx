@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   Modal,
   Image,
 } from 'react-native';
@@ -66,21 +65,26 @@ export function TransactionsScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Text style={styles.title}>Transactions History</Text>
           <TouchableOpacity style={styles.addBtn} onPress={() => setIsAddModalOpen(true)}>
             <Plus size={16} color="#ffffff" />
-            <Text style={styles.addBtnText}>+ Transaction</Text>
+            <Text style={styles.addBtnText}>Add Transaction</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.subtitle}>Detailed Google Pay + Excel style ledger of your activity</Text>
       </View>
 
       {/* Date Filter Tabs */}
-      <View style={styles.filterTabsRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0, marginVertical: 10 }}
+        contentContainerStyle={styles.filterTabsRow}
+      >
         {(['Today', 'Yesterday', 'This Week', 'This Month', 'All'] as DateFilter[]).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -92,7 +96,7 @@ export function TransactionsScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Search & Sub-filters */}
       <View style={styles.searchContainer}>
@@ -238,7 +242,7 @@ export function TransactionsScreen() {
 
       {/* Add Transaction Modal */}
       <AddTransactionModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -256,11 +260,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
     color: '#f8fafc',
+    flexShrink: 1,
   },
   subtitle: {
     fontSize: 12,
@@ -283,15 +290,19 @@ const styles = StyleSheet.create({
   },
   filterTabsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 18,
-    marginVertical: 10,
     gap: 8,
   },
   filterTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
     backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   filterTabActive: {
     backgroundColor: '#10b981',

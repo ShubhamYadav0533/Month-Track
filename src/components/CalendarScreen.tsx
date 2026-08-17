@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   Modal,
 } from 'react-native';
 import {
@@ -89,129 +88,131 @@ export function CalendarScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>📅 Life Calendar</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
-          <Plus size={18} color="#fff" />
-          <Text style={styles.addBtnText}>Add Event</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Month Navigation */}
-      <View style={styles.monthHeader}>
-        <TouchableOpacity style={styles.navBtn} onPress={prevMonth}>
-          <ChevronLeft size={20} color="#f8fafc" />
-        </TouchableOpacity>
-        <Text style={styles.monthText}>
-          {monthNames[month]} {year}
-        </Text>
-        <TouchableOpacity style={styles.navBtn} onPress={nextMonth}>
-          <ChevronRight size={20} color="#f8fafc" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Days of Week Header */}
-      <View style={styles.weekDaysRow}>
-        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((wd) => (
-          <Text key={wd} style={styles.weekDayText}>
-            {wd}
-          </Text>
-        ))}
-      </View>
-
-      {/* Calendar Grid */}
-      <View style={styles.calendarGrid}>
-        <View style={styles.gridContainer}>
-          {daysGrid.map((day, idx) => {
-            if (day === null) {
-              return <View key={`empty-${idx}`} style={styles.dayCellEmpty} />;
-            }
-
-            const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-            const isSelected = formattedDate === selectedDayStr;
-
-            const hasEvents = calendarEvents.some((e) => e.startDatetime.slice(0, 10) === formattedDate);
-            const hasExpenses = transactions.some((t) => (t.transactionDate || t.expenseDate) === formattedDate);
-
-            return (
-              <TouchableOpacity
-                key={`day-${day}`}
-                style={[
-                  styles.dayCell,
-                  isSelected && styles.dayCellSelected,
-                ]}
-                onPress={() => setSelectedDayStr(formattedDate)}
-              >
-                <Text style={[styles.dayNumber, isSelected && styles.dayNumberSelected]}>
-                  {day}
-                </Text>
-                <View style={styles.dotsRow}>
-                  {hasEvents ? <View style={[styles.dot, { backgroundColor: '#3b82f6' }]} /> : null}
-                  {hasExpenses ? <View style={[styles.dot, { backgroundColor: '#ef4444' }]} /> : null}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>📅 Life Calendar</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={() => setModalVisible(true)}>
+            <Plus size={18} color="#fff" />
+            <Text style={styles.addBtnText}>Add Event</Text>
+          </TouchableOpacity>
         </View>
-      </View>
 
-      {/* Agenda for Selected Date */}
-      <View style={styles.agendaHeader}>
-        <Text style={styles.agendaTitle}>Agenda for {selectedDayStr}</Text>
-      </View>
+        {/* Month Navigation */}
+        <View style={styles.monthHeader}>
+          <TouchableOpacity style={styles.navBtn} onPress={prevMonth}>
+            <ChevronLeft size={20} color="#f8fafc" />
+          </TouchableOpacity>
+          <Text style={styles.monthText}>
+            {monthNames[month]} {year}
+          </Text>
+          <TouchableOpacity style={styles.navBtn} onPress={nextMonth}>
+            <ChevronRight size={20} color="#f8fafc" />
+          </TouchableOpacity>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.agendaList} showsVerticalScrollIndicator={false}>
-        {selectedAttendance ? (
-          <View style={styles.agendaItem}>
-            <View style={[styles.agendaBar, { backgroundColor: '#10b981' }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemTitle}>Work Attendance: {selectedAttendance.status}</Text>
-              <Text style={styles.itemMeta}>Work Time: {selectedAttendance.totalWorkMinutes} mins</Text>
-            </View>
+        {/* Days of Week Header */}
+        <View style={styles.weekDaysRow}>
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((wd) => (
+            <Text key={wd} style={styles.weekDayText}>
+              {wd}
+            </Text>
+          ))}
+        </View>
+
+        {/* Calendar Grid */}
+        <View style={styles.calendarGrid}>
+          <View style={styles.gridContainer}>
+            {daysGrid.map((day, idx) => {
+              if (day === null) {
+                return <View key={`empty-${idx}`} style={styles.dayCellEmpty} />;
+              }
+
+              const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              const isSelected = formattedDate === selectedDayStr;
+
+              const hasEvents = calendarEvents.some((e) => e.startDatetime.slice(0, 10) === formattedDate);
+              const hasExpenses = transactions.some((t) => (t.transactionDate || t.expenseDate) === formattedDate);
+
+              return (
+                <TouchableOpacity
+                  key={`day-${day}`}
+                  style={[
+                    styles.dayCell,
+                    isSelected && styles.dayCellSelected,
+                  ]}
+                  onPress={() => setSelectedDayStr(formattedDate)}
+                >
+                  <Text style={[styles.dayNumber, isSelected && styles.dayNumberSelected]}>
+                    {day}
+                  </Text>
+                  <View style={styles.dotsRow}>
+                    {hasEvents ? <View style={[styles.dot, { backgroundColor: '#3b82f6' }]} /> : null}
+                    {hasExpenses ? <View style={[styles.dot, { backgroundColor: '#ef4444' }]} /> : null}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        ) : null}
+        </View>
 
-        {selectedExpenses.map((exp) => (
-          <View key={exp.id} style={styles.agendaItem}>
-            <View style={[styles.agendaBar, { backgroundColor: '#ef4444' }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemTitle}>Expense: {exp.title}</Text>
-              <Text style={styles.itemMeta}>{exp.category} · ₹{exp.amount}</Text>
-            </View>
-          </View>
-        ))}
+        {/* Agenda for Selected Date */}
+        <View style={styles.agendaHeader}>
+          <Text style={styles.agendaTitle}>Agenda for {selectedDayStr}</Text>
+        </View>
 
-        {selectedBills.map((bill) => (
-          <View key={bill.id} style={styles.agendaItem}>
-            <View style={[styles.agendaBar, { backgroundColor: '#f59e0b' }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemTitle}>Bill Due: {bill.title}</Text>
-              <Text style={styles.itemMeta}>Amount: ₹{bill.amount}</Text>
+        <View style={styles.agendaList}>
+          {selectedAttendance ? (
+            <View style={styles.agendaItem}>
+              <View style={[styles.agendaBar, { backgroundColor: '#10b981' }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>Work Attendance: {selectedAttendance.status}</Text>
+                <Text style={styles.itemMeta}>Work Time: {selectedAttendance.totalWorkMinutes} mins</Text>
+              </View>
             </View>
-          </View>
-        ))}
+          ) : null}
 
-        {selectedEvents.map((evt) => (
-          <View key={evt.id} style={styles.agendaItem}>
-            <View style={[styles.agendaBar, { backgroundColor: evt.color || '#3b82f6' }]} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.itemTitle}>{evt.title}</Text>
-              <Text style={styles.itemMeta}>{evt.eventType} {evt.location ? `· ${evt.location}` : ''}</Text>
+          {selectedExpenses.map((exp) => (
+            <View key={exp.id} style={styles.agendaItem}>
+              <View style={[styles.agendaBar, { backgroundColor: '#ef4444' }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>Expense: {exp.title}</Text>
+                <Text style={styles.itemMeta}>{exp.category} · ₹{exp.amount}</Text>
+              </View>
             </View>
-          </View>
-        ))}
+          ))}
 
-        {!selectedAttendance &&
-          selectedExpenses.length === 0 &&
-          selectedBills.length === 0 &&
-          selectedEvents.length === 0 && (
-            <View style={styles.emptyAgenda}>
-              <Clock size={32} color="#334155" />
-              <Text style={styles.emptyText}>No events or expenses scheduled for this date.</Text>
+          {selectedBills.map((bill) => (
+            <View key={bill.id} style={styles.agendaItem}>
+              <View style={[styles.agendaBar, { backgroundColor: '#f59e0b' }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>Bill Due: {bill.title}</Text>
+                <Text style={styles.itemMeta}>Amount: ₹{bill.amount}</Text>
+              </View>
             </View>
-          )}
+          ))}
+
+          {selectedEvents.map((evt) => (
+            <View key={evt.id} style={styles.agendaItem}>
+              <View style={[styles.agendaBar, { backgroundColor: evt.color || '#3b82f6' }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>{evt.title}</Text>
+                <Text style={styles.itemMeta}>{evt.eventType} {evt.location ? `· ${evt.location}` : ''}</Text>
+              </View>
+            </View>
+          ))}
+
+          {!selectedAttendance &&
+            selectedExpenses.length === 0 &&
+            selectedBills.length === 0 &&
+            selectedEvents.length === 0 && (
+              <View style={styles.emptyAgenda}>
+                <Clock size={32} color="#334155" />
+                <Text style={styles.emptyText}>No events or expenses scheduled for this date.</Text>
+              </View>
+            )}
+        </View>
       </ScrollView>
 
       {/* Add Event Modal */}
@@ -274,13 +275,14 @@ export function CalendarScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a' },
-  header: { padding: 20, paddingBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  scrollContent: { paddingBottom: 60 },
+  header: { padding: 20, paddingBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   title: { fontSize: 22, color: '#f8fafc', fontWeight: '800' },
   addBtn: { backgroundColor: '#10b981', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
   addBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
