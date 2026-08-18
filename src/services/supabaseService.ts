@@ -1,4 +1,5 @@
 import { supabase } from '../config/supabaseClient';
+import { fetchExpensesFromBackend } from './api';
 import {
   UserProfile,
   Account,
@@ -520,6 +521,18 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
         .order('transaction_date', { ascending: false });
     }
 
+    let txList: any[] = txRes.data || [];
+    if (txList.length === 0) {
+      try {
+        const backendTxs = await fetchExpensesFromBackend();
+        if (backendTxs && backendTxs.length > 0) {
+          txList = backendTxs;
+        }
+      } catch (err) {
+        console.warn('Fallback backend expenses fetch failed:', err);
+      }
+    }
+
     // 4. Fetch budgets, goals, tasks, bills with fallback to all rows
     let budgetsRes = await supabase.from('budgets').select('*').eq('user_id', targetUserId);
     if (!budgetsRes.data || budgetsRes.data.length === 0) {
@@ -557,7 +570,7 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
       success: true,
       profile: userProfile,
       accounts: accountsRes.data || [],
-      transactions: (txRes.data || []).map((t: Record<string, unknown>): Transaction => ({
+      transactions: txList.map((t: Record<string, unknown>): Transaction => ({
         id: String(t.id || ''),
         title: String(t.title || ''),
         amount: parseFloat(String(t.amount || 0)),

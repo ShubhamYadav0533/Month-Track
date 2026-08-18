@@ -164,8 +164,8 @@ export const useFinanceStore = create<FinanceState>()(
 
           // Merge Supabase transactions and local state without duplicates
           const txMap = new Map<string, Transaction>();
-          fetchedTxs.forEach((t) => txMap.set(t.id, t));
           currentLocalTxs.forEach((t) => txMap.set(t.id, t));
+          fetchedTxs.forEach((t) => txMap.set(t.id, t));
           const finalTxs = Array.from(txMap.values());
 
           set((state) => {

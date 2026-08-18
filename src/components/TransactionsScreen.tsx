@@ -1,33 +1,35 @@
-import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  Modal,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Copy,
+  FileText,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import {
   Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { Transaction } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import { AddTransactionModal } from './AddTransactionModal';
-import {
-  Search,
-  Plus,
-  Trash2,
-  Copy,
-  FileText,
-  X,
-  ArrowUpRight,
-  ArrowDownLeft,
-} from 'lucide-react-native';
 
 type DateFilter = 'Today' | 'Yesterday' | 'This Week' | 'This Month' | 'All';
 
 export function TransactionsScreen() {
-  const { profile, transactions, deleteTransaction, duplicateTransaction } = useFinanceStore();
+  const { profile, transactions, deleteTransaction, duplicateTransaction, loadSupabaseData, isLoading } = useFinanceStore();
 
   const [dateFilter, setDateFilter] = useState<DateFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +37,10 @@ export function TransactionsScreen() {
   const [selectedPaymentMethod] = useState<string>('All');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    loadSupabaseData();
+  }, [loadSupabaseData]);
 
   const todayStr = getFormattedDate();
 
@@ -70,10 +76,15 @@ export function TransactionsScreen() {
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Text style={styles.title}>Transactions History</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => setIsAddModalOpen(true)}>
-            <Plus size={16} color="#ffffff" />
-            <Text style={styles.addBtnText}>Add Transaction</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity style={styles.syncBtn} onPress={loadSupabaseData}>
+              <RefreshCw size={16} color="#10b981" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addBtn} onPress={() => setIsAddModalOpen(true)}>
+              <Plus size={16} color="#ffffff" />
+              <Text style={styles.addBtnText}>Add Transaction</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <Text style={styles.subtitle}>Detailed Google Pay + Excel style ledger of your activity</Text>
       </View>
@@ -482,5 +493,12 @@ const styles = StyleSheet.create({
   actionText: {
     fontWeight: '700',
     fontSize: 14,
+  },
+  syncBtn: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

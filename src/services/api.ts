@@ -57,3 +57,18 @@ export async function syncExpenseToBackend(expense: {
     return null;
   }
 }
+
+export async function fetchExpensesFromBackend() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/expenses`);
+    const data = await res.json();
+    if (data && data.success && Array.isArray(data.expenses)) {
+      return data.expenses;
+    }
+    return [];
+  } catch (err) {
+    console.warn('Backend server offline or fetch error:', err);
+    return [];
+  }
+}
+
