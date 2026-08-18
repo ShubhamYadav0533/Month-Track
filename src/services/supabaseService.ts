@@ -76,12 +76,39 @@ export async function saveAccountsToSupabase(userId: string, accounts: Account[]
 
 export async function saveTransactionToSupabase(userId: string, tx: Transaction) {
   try {
+    // 1. Ensure user row exists in Supabase 'users' table so foreign key constraint passes
+    await supabase.from('users').upsert({
+      id: userId,
+      name: 'User',
+      email: `${userId}@smartfinance.app`,
+      monthly_income: 0,
+      salary_date: 1,
+      savings_goal: 0,
+      currency: '₹',
+    });
+
+    // 2. Validate account_id is a valid UUID, fallback to DEFAULT_ACC_UPI UUID if invalid
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const accountId = uuidRegex.test(tx.accountId)
+      ? tx.accountId
+      : '00000000-0000-4000-a000-000000000012';
+
+    // 3. Ensure account row exists in Supabase 'accounts' table so foreign key constraint passes
+    await supabase.from('accounts').upsert({
+      id: accountId,
+      user_id: userId,
+      name: 'Default Account',
+      type: 'upi',
+      balance: 0,
+      credit_limit: 0,
+    });
+
     const { data, error } = await supabase
       .from('transactions')
       .upsert({
         id: tx.id,
         user_id: userId,
-        account_id: tx.accountId,
+        account_id: accountId,
         title: tx.title,
         amount: tx.amount,
         type: tx.type,
@@ -96,7 +123,11 @@ export async function saveTransactionToSupabase(userId: string, tx: Transaction)
       })
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[Supabase] Transaction sync error:', error);
+      throw error;
+    }
+    console.log('[Supabase] Transaction saved successfully:', data);
     return { success: true, data };
   } catch (err) {
     console.warn('[Supabase] Transaction sync error:', err);
@@ -459,24 +490,72 @@ export async function deletePlannerSlotFromSupabase(slotId: string) {
 
 export async function fetchFullUserDataFromSupabase(userId: string) {
   try {
-    const [userRes, accountsRes, txRes, budgetsRes, goalsRes, tasksRes, billsRes] =
-      await Promise.all([
-        supabase.from('users').select('*').eq('id', userId).single(),
-        supabase.from('accounts').select('*').eq('user_id', userId),
-        supabase
-          .from('transactions')
-          .select('*')
-          .eq('user_id', userId)
-          .order('transaction_date', { ascending: false }),
-        supabase.from('budgets').select('*').eq('user_id', userId),
-        supabase.from('savings_goals').select('*').eq('user_id', userId),
-        supabase.from('tasks').select('*').eq('user_id', userId),
-        supabase.from('bills').select('*').eq('user_id', userId),
-      ]);
+    // 1. Fetch profile for userId, or fallback to the latest user in Supabase
+    let userRes = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+    if (!userRes.data) {
+      const latestUserRes = await supabase.from('users').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      if (latestUserRes.data) {
+        userRes = latestUserRes;
+      }
+    }
+
+    const targetUserId = userRes.data?.id || userId;
+
+    // 2. Fetch accounts for targetUserId or all accounts
+    let accountsRes = await supabase.from('accounts').select('*').eq('user_id', targetUserId);
+    if (!accountsRes.data || accountsRes.data.length === 0) {
+      accountsRes = await supabase.from('accounts').select('*');
+    }
+
+    // 3. Fetch transactions for targetUserId or all transactions
+    let txRes = await supabase
+      .from('transactions')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .order('transaction_date', { ascending: false });
+    if (!txRes.data || txRes.data.length === 0) {
+      txRes = await supabase
+        .from('transactions')
+        .select('*')
+        .order('transaction_date', { ascending: false });
+    }
+
+    // 4. Fetch budgets, goals, tasks, bills with fallback to all rows
+    let budgetsRes = await supabase.from('budgets').select('*').eq('user_id', targetUserId);
+    if (!budgetsRes.data || budgetsRes.data.length === 0) {
+      budgetsRes = await supabase.from('budgets').select('*');
+    }
+
+    let goalsRes = await supabase.from('savings_goals').select('*').eq('user_id', targetUserId);
+    if (!goalsRes.data || goalsRes.data.length === 0) {
+      goalsRes = await supabase.from('savings_goals').select('*');
+    }
+
+    let tasksRes = await supabase.from('tasks').select('*').eq('user_id', targetUserId);
+    if (!tasksRes.data || tasksRes.data.length === 0) {
+      tasksRes = await supabase.from('tasks').select('*');
+    }
+
+    let billsRes = await supabase.from('bills').select('*').eq('user_id', targetUserId);
+    if (!billsRes.data || billsRes.data.length === 0) {
+      billsRes = await supabase.from('bills').select('*');
+    }
+
+    let userProfile = userRes.data;
+    if (!userProfile) {
+      userProfile = {
+        id: userId,
+        name: 'User',
+        monthly_income: 0,
+        salary_date: 1,
+        savings_goal: 0,
+        currency: '₹',
+      };
+    }
 
     return {
       success: true,
-      profile: userRes.data,
+      profile: userProfile,
       accounts: accountsRes.data || [],
       transactions: (txRes.data || []).map((t: Record<string, unknown>): Transaction => ({
         id: String(t.id || ''),

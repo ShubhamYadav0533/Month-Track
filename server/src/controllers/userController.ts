@@ -54,9 +54,9 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
     const { userId } = req.params;
     const { data: user, error } = await supabase
       .from('users')
-      .select('*, accounts(*), expenses(*), budgets(*), savings_goals(*)')
+      .select('*, accounts(*), transactions(*), budgets(*), savings_goals(*)')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (error || !user) {
       res.status(404).json({ success: false, message: 'User not found' });

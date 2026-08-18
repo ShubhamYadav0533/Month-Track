@@ -99,11 +99,11 @@ interface FinanceState {
 }
 
 // Fixed UUIDs for default entities (deterministic so they stay consistent across reloads)
-const DEFAULT_USER_ID = '00000000-0000-4000-a000-000000000001';
-const DEFAULT_ACC_WALLET = '00000000-0000-4000-a000-000000000010';
-const DEFAULT_ACC_BANK   = '00000000-0000-4000-a000-000000000011';
-const DEFAULT_ACC_UPI    = '00000000-0000-4000-a000-000000000012';
-const DEFAULT_ACC_CARD   = '00000000-0000-4000-a000-000000000013';
+export const DEFAULT_USER_ID = '00000000-0000-4000-a000-000000000001';
+export const DEFAULT_ACC_WALLET = '00000000-0000-4000-a000-000000000010';
+export const DEFAULT_ACC_BANK   = '00000000-0000-4000-a000-000000000011';
+export const DEFAULT_ACC_UPI    = '00000000-0000-4000-a000-000000000012';
+export const DEFAULT_ACC_CARD   = '00000000-0000-4000-a000-000000000013';
 
 const DEFAULT_PROFILE: UserProfile = {
   id: DEFAULT_USER_ID,
@@ -152,9 +152,23 @@ export const useFinanceStore = create<FinanceState>()(
         set({ isLoading: true });
         const res = await fetchFullUserDataFromSupabase(userId);
         if (res.success && res.profile) {
-          set((state) => {
-            const fetchedTxs: Transaction[] = res.transactions || [];
+          const currentLocalTxs = get().transactions;
+          const fetchedTxs = res.transactions || [];
 
+          // Sync any local transactions up to Supabase so they are persisted remotely
+          if (currentLocalTxs.length > 0) {
+            currentLocalTxs.forEach((tx) => {
+              saveTransactionToSupabase(userId, tx);
+            });
+          }
+
+          // Merge Supabase transactions and local state without duplicates
+          const txMap = new Map<string, Transaction>();
+          fetchedTxs.forEach((t) => txMap.set(t.id, t));
+          currentLocalTxs.forEach((t) => txMap.set(t.id, t));
+          const finalTxs = Array.from(txMap.values());
+
+          set((state) => {
             return {
               profile: {
                 id: res.profile.id,
@@ -165,8 +179,8 @@ export const useFinanceStore = create<FinanceState>()(
                 currency: res.profile.currency || '₹',
                 isSetupComplete: true,
               },
-              transactions: fetchedTxs,
-              expenses: fetchedTxs,
+              transactions: finalTxs,
+              expenses: finalTxs,
               accounts: res.accounts.length > 0
                 ? res.accounts.map((a: any) => ({
                     id: a.id,
@@ -365,7 +379,7 @@ export const useFinanceStore = create<FinanceState>()(
               amount: targetBill.amount,
               type: 'Expense',
               category: targetBill.category || 'Bills',
-              accountId: targetBill.accountId || state.accounts[0]?.id || 'acc_upi',
+              accountId: targetBill.accountId || state.accounts[0]?.id || DEFAULT_ACC_UPI,
               paymentMethod: 'UPI',
               transactionDate: getFormattedDate(),
             });

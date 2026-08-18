@@ -1,4 +1,11 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://month-track.onrender.com/api';
+const LOCAL_BACKEND_URL = 'http://localhost:5001/api';
+const PROD_BACKEND_URL = 'https://month-track.onrender.com/api';
+
+// In local development (__DEV__ is true), default to local backend URL.
+// When building APK / production bundle (__DEV__ is false), automatically use the production URL.
+export const API_BASE_URL = __DEV__
+  ? process.env.EXPO_PUBLIC_BACKEND_URL || LOCAL_BACKEND_URL
+  : PROD_BACKEND_URL;
 
 export interface SyncSetupPayload {
   name: string;

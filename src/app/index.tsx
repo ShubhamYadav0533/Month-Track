@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -34,8 +34,12 @@ type UnifiedTab =
   | 'profile';
 
 export default function MainApp() {
-  const { profile, isLocked } = useFinanceStore();
+  const { profile, isLocked, loadSupabaseData } = useFinanceStore();
   const [currentTab, setCurrentTab] = useState<UnifiedTab>('dashboard');
+
+  useEffect(() => {
+    loadSupabaseData();
+  }, [loadSupabaseData]);
 
   const appMode = profile.defaultAppMode || 'finance';
 

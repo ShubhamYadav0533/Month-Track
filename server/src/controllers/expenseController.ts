@@ -4,7 +4,7 @@ import { supabase } from '../config/db';
 export const getExpenses = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.query;
-    let query = supabase.from('expenses').select('*').order('expense_date', { ascending: false });
+    let query = supabase.from('transactions').select('*').order('transaction_date', { ascending: false });
 
     if (userId) {
       query = query.eq('user_id', String(userId));
@@ -21,21 +21,23 @@ export const getExpenses = async (req: Request, res: Response): Promise<void> =>
 
 export const createExpense = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { userId, accountId, amount, category, description, paymentMethod, location, receiptUrl, expenseDate } = req.body;
+    const { userId, accountId, amount, category, title, description, paymentMethod, location, receiptUrl, transactionDate, expenseDate } = req.body;
     const numAmount = parseFloat(amount);
+    const dateStr = transactionDate || expenseDate || new Date().toISOString().split('T')[0];
 
     const { data: expense, error } = await supabase
-      .from('expenses')
-      .insert({
+      .from('transactions')
+      .upsert({
         user_id: userId,
         account_id: accountId,
         amount: numAmount,
+        title: title || description || category,
+        type: 'Expense',
         category,
-        description: description || category,
-        payment_method: paymentMethod,
+        payment_method: paymentMethod || 'UPI',
         location,
-        receipt_url: receiptUrl,
-        expense_date: expenseDate || new Date().toISOString().split('T')[0],
+        attachment: receiptUrl,
+        transaction_date: dateStr,
       })
       .select()
       .single();
@@ -44,7 +46,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
 
     // Deduct amount from Account balance in Supabase
     if (accountId) {
-      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', accountId).single();
+      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', accountId).maybeSingle();
       if (acc) {
         await supabase
           .from('accounts')
@@ -62,10 +64,10 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
 export const deleteExpense = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const { data: exp } = await supabase.from('expenses').select('account_id, amount').eq('id', id).single();
+    const { data: exp } = await supabase.from('transactions').select('account_id, amount').eq('id', id).maybeSingle();
 
     if (exp && exp.account_id) {
-      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', exp.account_id).single();
+      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', exp.account_id).maybeSingle();
       if (acc) {
         await supabase
           .from('accounts')
@@ -74,10 +76,10 @@ export const deleteExpense = async (req: Request, res: Response): Promise<void> 
       }
     }
 
-    const { error } = await supabase.from('expenses').delete().eq('id', id);
+    const { error } = await supabase.from('transactions').delete().eq('id', id);
     if (error) throw error;
 
-    res.json({ success: true, message: 'Expense deleted successfully' });
+    res.json({ success: true, message: 'Transaction deleted successfully' });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }

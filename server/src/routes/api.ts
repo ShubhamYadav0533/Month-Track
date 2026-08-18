@@ -30,12 +30,37 @@ router.get('/expenses', getExpenses);
 router.post('/expenses', createExpense);
 router.delete('/expenses/:id', deleteExpense);
 
-// Tasks Routes (Microsoft To-Do)
+// Tasks Routes
 router.get('/tasks', async (req, res) => {
   try {
     const { data: tasks, error } = await supabase.from('tasks').select('*');
     if (error) throw error;
     res.json({ success: true, tasks });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/tasks', async (req, res) => {
+  try {
+    const { userId, title, description, dueDate, priority, section, completed, reminderDate } = req.body;
+    const { data: task, error } = await supabase
+      .from('tasks')
+      .upsert({
+        user_id: userId,
+        title,
+        description: description || null,
+        due_date: dueDate || new Date().toISOString().split('T')[0],
+        priority: priority || 'Medium',
+        section: section || 'Today',
+        completed: completed || false,
+        reminder_date: reminderDate || null,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, task });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -47,6 +72,29 @@ router.get('/bills', async (req, res) => {
     const { data: bills, error } = await supabase.from('bills').select('*');
     if (error) throw error;
     res.json({ success: true, bills });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/bills', async (req, res) => {
+  try {
+    const { userId, title, amount, dueDate, recurring, status } = req.body;
+    const { data: bill, error } = await supabase
+      .from('bills')
+      .upsert({
+        user_id: userId,
+        title,
+        amount: parseFloat(amount),
+        due_date: dueDate || new Date().toISOString().split('T')[0],
+        recurring: recurring || false,
+        status: status || 'Pending',
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, bill });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -105,7 +153,7 @@ router.post('/goals', async (req, res) => {
         target_amount: parseFloat(targetAmount),
         saved_amount: parseFloat(savedAmount) || 0,
         target_date: targetDate,
-        icon,
+        icon: icon || 'target',
       })
       .select()
       .single();
@@ -123,6 +171,30 @@ router.get('/recurring', async (req, res) => {
     const { data: recurring, error } = await supabase.from('recurring_transactions').select('*');
     if (error) throw error;
     res.json({ success: true, recurring });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.post('/recurring', async (req, res) => {
+  try {
+    const { userId, title, amount, category, frequency, nextDueDate, autoDeduct } = req.body;
+    const { data: item, error } = await supabase
+      .from('recurring_transactions')
+      .insert({
+        user_id: userId,
+        title,
+        amount: parseFloat(amount),
+        category: category || 'Bills',
+        frequency: frequency || 'monthly',
+        next_due_date: nextDueDate || new Date().toISOString().split('T')[0],
+        auto_deduct: autoDeduct ?? true,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    res.json({ success: true, recurring: item });
   } catch (err: any) {
     res.status(500).json({ success: false, error: err.message });
   }

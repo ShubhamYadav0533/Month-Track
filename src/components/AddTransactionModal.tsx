@@ -9,7 +9,13 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useFinanceStore } from '../store/useFinanceStore';
+import {
+  useFinanceStore,
+  DEFAULT_ACC_UPI,
+  DEFAULT_ACC_BANK,
+  DEFAULT_ACC_WALLET,
+  DEFAULT_ACC_CARD,
+} from '../store/useFinanceStore';
 import { ExpenseCategory, TransactionType, PaymentMethod } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import { parseReceiptImage } from '../utils/ocrParser';
@@ -48,11 +54,11 @@ const TYPES: { name: TransactionType; color: string }[] = [
 ];
 
 const PAYMENT_METHODS: { name: PaymentMethod; icon: string; accountId: string }[] = [
-  { name: 'UPI', icon: '📱', accountId: 'acc_upi' },
-  { name: 'Bank', icon: '🏦', accountId: 'acc_bank' },
-  { name: 'Wallet', icon: '👛', accountId: 'acc_wallet' },
-  { name: 'Credit Card', icon: '💳', accountId: 'acc_card' },
-  { name: 'Cash', icon: '💵', accountId: 'acc_wallet' },
+  { name: 'UPI', icon: '📱', accountId: DEFAULT_ACC_UPI },
+  { name: 'Bank', icon: '🏦', accountId: DEFAULT_ACC_BANK },
+  { name: 'Wallet', icon: '👛', accountId: DEFAULT_ACC_WALLET },
+  { name: 'Credit Card', icon: '💳', accountId: DEFAULT_ACC_CARD },
+  { name: 'Cash', icon: '💵', accountId: DEFAULT_ACC_WALLET },
 ];
 
 interface Props {

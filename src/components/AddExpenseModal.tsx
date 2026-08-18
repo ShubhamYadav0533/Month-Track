@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Image,
 } from 'react-native';
-import { useFinanceStore } from '../store/useFinanceStore';
+import { useFinanceStore, DEFAULT_ACC_UPI } from '../store/useFinanceStore';
 import { ExpenseCategory, PaymentMethod } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import { parseReceiptImage, ParsedReceipt } from '../utils/ocrParser';
@@ -76,7 +76,7 @@ export function AddExpenseModal({ visible, onClose }: AddExpenseModalProps) {
       title: description || category,
       type: 'Expense',
       transactionDate: expenseDate,
-      accountId: matchedAccount ? matchedAccount.id : accounts[0]?.id || 'acc_upi',
+      accountId: matchedAccount ? matchedAccount.id : accounts[0]?.id || DEFAULT_ACC_UPI,
       amount: numericAmount,
       category,
       description: description || category,
