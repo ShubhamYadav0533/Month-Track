@@ -213,17 +213,34 @@ export const deleteExpenseFromSupabase = deleteTransactionFromSupabase;
 
 export async function saveTaskToSupabase(userId: string, task: TaskItem) {
   try {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = userId && uuidRegex.test(userId)
+      ? userId
+      : '00000000-0000-4000-a000-000000000001';
+
+    await supabase.from('users').upsert({
+      id: validUserId,
+      name: 'User',
+      email: `${validUserId}@smartfinance.app`,
+      monthly_income: 0,
+      salary_date: 1,
+      savings_goal: 0,
+      currency: '₹',
+    });
+
+    const taskId = (task.id && uuidRegex.test(task.id)) ? task.id : undefined;
+
     const { data, error } = await supabase
       .from('tasks')
       .upsert({
-        id: task.id,
-        user_id: userId,
+        ...(taskId ? { id: taskId } : {}),
+        user_id: validUserId,
         title: task.title,
         description: task.description || null,
-        due_date: task.dueDate,
-        priority: task.priority,
-        section: task.section,
-        completed: task.completed,
+        due_date: task.dueDate || new Date().toISOString().split('T')[0],
+        priority: task.priority || 'Medium',
+        section: task.section || 'Today',
+        completed: task.completed || false,
         reminder_date: task.reminderDate || null,
       })
       .select();
@@ -253,16 +270,33 @@ export async function deleteTaskFromSupabase(taskId: string) {
 
 export async function saveBillToSupabase(userId: string, bill: BillItem) {
   try {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = userId && uuidRegex.test(userId)
+      ? userId
+      : '00000000-0000-4000-a000-000000000001';
+
+    await supabase.from('users').upsert({
+      id: validUserId,
+      name: 'User',
+      email: `${validUserId}@smartfinance.app`,
+      monthly_income: 0,
+      salary_date: 1,
+      savings_goal: 0,
+      currency: '₹',
+    });
+
+    const billId = (bill.id && uuidRegex.test(bill.id)) ? bill.id : undefined;
+
     const { data, error } = await supabase
       .from('bills')
       .upsert({
-        id: bill.id,
-        user_id: userId,
+        ...(billId ? { id: billId } : {}),
+        user_id: validUserId,
         title: bill.title,
         amount: bill.amount,
-        due_date: bill.dueDate,
-        recurring: bill.recurring,
-        status: bill.status,
+        due_date: bill.dueDate || new Date().toISOString().split('T')[0],
+        recurring: bill.recurring || false,
+        status: bill.status || 'Pending',
       })
       .select();
 
@@ -652,25 +686,26 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
         targetDate: g.target_date ? String(g.target_date) : undefined,
         icon: String(g.icon || 'target'),
       })),
-      tasks: (tasksRes.data || []).map((t: Record<string, unknown>) => ({
-        id: t.id,
-        title: t.title,
-        description: t.description,
-        dueDate: t.due_date,
-        priority: t.priority,
-        section: t.section,
-        completed: t.completed,
-        reminderDate: t.reminder_date,
-        createdAt: t.created_at,
+      tasks: (tasksRes.data || []).map((t: Record<string, unknown>): TaskItem => ({
+        id: String(t.id || ''),
+        title: String(t.title || ''),
+        description: t.description ? String(t.description) : undefined,
+        dueDate: String(t.due_date || ''),
+        priority: (t.priority || 'Medium') as any,
+        section: (t.section || 'Today') as any,
+        completed: Boolean(t.completed),
+        reminderDate: t.reminder_date ? String(t.reminder_date) : undefined,
+        createdAt: String(t.created_at || ''),
       })),
-      bills: (billsRes.data || []).map((b: Record<string, unknown>) => ({
-        id: b.id,
-        title: b.title,
-        amount: parseFloat(String(b.amount)),
-        dueDate: b.due_date,
-        recurring: b.recurring,
-        status: b.status,
-        createdAt: b.created_at,
+      bills: (billsRes.data || []).map((b: Record<string, unknown>): BillItem => ({
+        id: String(b.id || ''),
+        title: String(b.title || ''),
+        amount: parseFloat(String(b.amount || 0)),
+        dueDate: String(b.due_date || ''),
+        recurring: Boolean(b.recurring),
+        status: (b.status || 'Pending') as 'Pending' | 'Paid',
+        category: b.category ? (String(b.category) as ExpenseCategory) : undefined,
+        createdAt: String(b.created_at || ''),
       })),
     };
   } catch (err) {

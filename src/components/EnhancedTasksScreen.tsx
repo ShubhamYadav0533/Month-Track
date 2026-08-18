@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import {
   RotateCw,
 } from 'lucide-react-native';
 import { useProductivityStore } from '../store/useProductivityStore';
+import { useFinanceStore } from '../store/useFinanceStore';
 import { TaskPriority, RepeatType } from '../types/productivity';
 
 export function EnhancedTasksScreen() {
@@ -29,6 +30,11 @@ export function EnhancedTasksScreen() {
     deleteEnhancedTask,
     toggleTaskComplete,
   } = useProductivityStore();
+  const { loadSupabaseData } = useFinanceStore();
+
+  useEffect(() => {
+    loadSupabaseData();
+  }, [loadSupabaseData]);
 
   const [filterSection, setFilterSection] = useState<'Today' | 'Upcoming' | 'Important' | 'Completed' | 'All'>('Today');
   const [modalVisible, setModalVisible] = useState(false);

@@ -17,6 +17,7 @@ import {
 } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import { generateId } from '../utils/generateId';
+import { useProductivityStore } from './useProductivityStore';
 import {
   saveUserToSupabase,
   saveAccountsToSupabase,
@@ -185,9 +186,26 @@ export const useFinanceStore = create<FinanceState>()(
                 : state.accounts,
               budgets: res.budgets || [],
               savingsGoals: res.goals || [],
+              tasks: res.tasks || [],
+              bills: res.bills || [],
               isLoading: false,
             };
           });
+
+          const fetchedTasks = (res.tasks || []).map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            description: t.description || '',
+            priority: t.priority || 'Medium',
+            status: (t.completed ? 'Completed' : 'Pending') as 'Completed' | 'Pending',
+            category: 'Work',
+            dueDate: t.dueDate || new Date().toISOString().slice(0, 10),
+            repeatType: 'Once' as const,
+            completed: Boolean(t.completed),
+            createdAt: t.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }));
+          useProductivityStore.setState({ enhancedTasks: fetchedTasks });
         } else {
           set({ isLoading: false });
         }
@@ -364,9 +382,22 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       toggleTaskCompleted: (id) => {
-        set((state) => ({
-          tasks: state.tasks.map((t) => (t.id === id ? { ...t, completed: !t.completed, section: !t.completed ? 'Completed' : 'Today' } : t)),
-        }));
+        set((state) => {
+          const updatedTasks: TaskItem[] = state.tasks.map((t) =>
+            t.id === id
+              ? {
+                  ...t,
+                  completed: !t.completed,
+                  section: (!t.completed ? 'Completed' : 'Today') as TaskItem['section'],
+                }
+              : t
+          );
+          const updated = updatedTasks.find((t) => t.id === id);
+          if (updated) {
+            saveTaskToSupabase(state.profile.id, updated);
+          }
+          return { tasks: updatedTasks };
+        });
       },
 
       deleteTask: (id) => {
@@ -402,6 +433,10 @@ export const useFinanceStore = create<FinanceState>()(
 
           const nextStatus: 'Pending' | 'Paid' = targetBill.status === 'Pending' ? 'Paid' : 'Pending';
           const updatedBills = state.bills.map((b) => (b.id === id ? { ...b, status: nextStatus } : b));
+          const updatedBill = updatedBills.find((b) => b.id === id);
+          if (updatedBill) {
+            saveBillToSupabase(state.profile.id, updatedBill);
+          }
 
           // If marked as Paid, create a corresponding transaction automatically!
           if (nextStatus === 'Paid') {

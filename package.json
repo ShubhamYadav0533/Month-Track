@@ -51,7 +51,7 @@
   },
   "scripts": {
     "build": "cd server && npm install && npm run build",
-    "server:start": "node server/dist/index.js",
+    "server:start": "cd server && npx ts-node src/index.ts",
     "expo:start": "expo start",
     "web:start": "expo start --web",
     "start": "concurrently --kill-others --names \"server,expo\" --prefix-colors \"blue,green\" \"npm run server:start\" \"npm run expo:start\"",

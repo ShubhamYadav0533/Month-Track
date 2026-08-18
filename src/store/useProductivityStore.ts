@@ -17,6 +17,8 @@ import {
 import { generateId } from '../utils/generateId';
 import { useFinanceStore } from './useFinanceStore';
 import {
+  saveTaskToSupabase,
+  deleteTaskFromSupabase,
   saveHabitToSupabase,
   deleteHabitFromSupabase,
   saveCalendarEventToSupabase,
@@ -180,6 +182,19 @@ export const useProductivityStore = create<ProductivityState>()(
           enhancedTasks: [newTask, ...state.enhancedTasks],
         }));
 
+        const userId = useFinanceStore.getState().profile.id;
+        saveTaskToSupabase(userId, {
+          id: newTask.id,
+          title: newTask.title,
+          description: newTask.description,
+          dueDate: newTask.dueDate || new Date().toISOString().slice(0, 10),
+          priority: (newTask.priority === 'Critical' ? 'High' : newTask.priority) as any,
+          section: 'Today',
+          completed: false,
+          reminderDate: newTask.reminderTime,
+          createdAt: now,
+        });
+
         if (notifId && taskData.reminderTime) {
           get().addReminder({
             taskId: id,
@@ -202,6 +217,7 @@ export const useProductivityStore = create<ProductivityState>()(
       },
 
       deleteEnhancedTask: (id) => {
+        deleteTaskFromSupabase(id);
         set((state) => ({
           enhancedTasks: state.enhancedTasks.filter((t) => t.id !== id),
           reminders: state.reminders.filter((r) => r.taskId !== id),
@@ -209,18 +225,34 @@ export const useProductivityStore = create<ProductivityState>()(
       },
 
       toggleTaskComplete: (id) => {
-        set((state) => ({
-          enhancedTasks: state.enhancedTasks.map((t) =>
+        set((state) => {
+          const updatedTasks = state.enhancedTasks.map((t) =>
             t.id === id
               ? {
                   ...t,
                   completed: !t.completed,
-                  status: !t.completed ? 'Completed' : 'Pending',
+                  status: (!t.completed ? 'Completed' : 'Pending') as any,
                   updatedAt: new Date().toISOString(),
                 }
               : t
-          ),
-        }));
+          );
+          const target = updatedTasks.find((t) => t.id === id);
+          if (target) {
+            const userId = useFinanceStore.getState().profile.id;
+            saveTaskToSupabase(userId, {
+              id: target.id,
+              title: target.title,
+              description: target.description,
+              dueDate: target.dueDate || new Date().toISOString().slice(0, 10),
+              priority: (target.priority === 'Critical' ? 'High' : target.priority) as any,
+              section: target.completed ? 'Completed' : 'Today',
+              completed: target.completed,
+              reminderDate: target.reminderTime,
+              createdAt: target.createdAt,
+            });
+          }
+          return { enhancedTasks: updatedTasks };
+        });
       },
 
       toggleChecklistItem: (taskId, itemId) => {
