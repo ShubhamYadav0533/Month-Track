@@ -130,6 +130,9 @@ const INITIAL_BILLS: BillItem[] = [];
 const INITIAL_GOALS: SavingsGoal[] = [];
 const INITIAL_TRANSACTIONS: Transaction[] = [];
 
+let lastTxTime = 0;
+let lastTxKey = '';
+
 export const useFinanceStore = create<FinanceState>()(
   persist(
     (set, get) => ({
@@ -222,9 +225,19 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       addTransaction: (txData) => {
-        const id = generateId();
         const dateStr = txData.transactionDate || (txData as any).expenseDate || getFormattedDate();
         const titleStr = txData.title || (txData as any).description || `${txData.type || 'Expense'}: ${txData.category}`;
+        const dedupeKey = `${titleStr}_${txData.amount}_${txData.category}_${dateStr}`;
+        const now = Date.now();
+
+        if (now - lastTxTime < 1500 && lastTxKey === dedupeKey) {
+          console.warn('[Store] Duplicate transaction submission blocked within 1.5s window:', dedupeKey);
+          return;
+        }
+        lastTxTime = now;
+        lastTxKey = dedupeKey;
+
+        const id = generateId();
 
         const newTx: Transaction = {
           ...txData,

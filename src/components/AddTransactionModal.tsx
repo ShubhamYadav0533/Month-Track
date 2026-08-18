@@ -84,37 +84,44 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
   const [tags] = useState('');
   const [receiptUrl, setReceiptUrl] = useState<string | undefined>();
   const [isScanning, setIsScanning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = () => {
+    if (isSaving) return;
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
 
-    const selectedAcc = PAYMENT_METHODS.find((p) => p.name === paymentMethod);
-    const accountId = selectedAcc ? selectedAcc.accountId : accounts[0]?.id || 'acc_upi';
+    setIsSaving(true);
+    try {
+      const selectedAcc = PAYMENT_METHODS.find((p) => p.name === paymentMethod);
+      const accountId = selectedAcc ? selectedAcc.accountId : accounts[0]?.id || 'acc_upi';
 
-    addTransaction({
-      title: title || `${type}: ${category}`,
-      amount: numAmount,
-      type,
-      category,
-      subCategory,
-      accountId,
-      paymentMethod,
-      transactionDate: date || getFormattedDate(),
-      time,
-      recurring,
-      location,
-      notes,
-      tags: tags ? tags.split(',').map((t) => t.trim()) : [],
-      attachment: receiptUrl,
-    });
+      addTransaction({
+        title: title || `${type}: ${category}`,
+        amount: numAmount,
+        type,
+        category,
+        subCategory,
+        accountId,
+        paymentMethod,
+        transactionDate: date || getFormattedDate(),
+        time,
+        recurring,
+        location,
+        notes,
+        tags: tags ? tags.split(',').map((t) => t.trim()) : [],
+        attachment: receiptUrl,
+      });
 
-    // Reset & Close
-    setTitle('');
-    setAmount('');
-    setNotes('');
-    setReceiptUrl(undefined);
-    onClose();
+      // Reset & Close
+      setTitle('');
+      setAmount('');
+      setNotes('');
+      setReceiptUrl(undefined);
+      onClose();
+    } finally {
+      setTimeout(() => setIsSaving(false), 800);
+    }
   };
 
   const handleSimulateOCR = async () => {
@@ -290,9 +297,19 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
             />
 
             {/* Save Button */}
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Check size={20} color="#ffffff" />
-              <Text style={styles.saveBtnText}>Save Transaction</Text>
+            <TouchableOpacity
+              style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <>
+                  <Check size={20} color="#ffffff" />
+                  <Text style={styles.saveBtnText}>Save Transaction</Text>
+                </>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </View>
