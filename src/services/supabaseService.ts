@@ -16,6 +16,8 @@ import {
   ExpenseCategory,
   TransactionType,
   PaymentMethod,
+  AttendanceRecord,
+  AttendanceStatus,
 } from '../types';
 import {
   NotificationRecord,
@@ -720,5 +722,139 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
       tasks: [],
       bills: [],
     };
+  }
+}
+
+// ─────────────────────────────────────────────────
+// 13. Attendance & Employees Sync
+// ─────────────────────────────────────────────────
+
+export async function saveAttendanceToSupabase(userId: string, record: AttendanceRecord) {
+  try {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = (userId && uuidRegex.test(userId))
+      ? userId
+      : '00000000-0000-4000-a000-000000000001';
+
+    // 1. Ensure user row exists in Supabase 'users' table
+    await supabase.from('users').upsert({
+      id: validUserId,
+      name: 'User',
+      email: `${validUserId}@smartfinance.app`,
+      monthly_income: 0,
+      salary_date: 1,
+      savings_goal: 0,
+      currency: '₹',
+    });
+
+    const validEmpId = (record.employeeId && uuidRegex.test(record.employeeId))
+      ? record.employeeId
+      : '00000000-0000-4000-a000-000000000001';
+
+    // 2. Ensure employee row exists in Supabase 'employees' table
+    await supabase.from('employees').upsert({
+      id: validEmpId,
+      user_id: validUserId,
+      employee_code: 'EMP001',
+      full_name: 'Employee',
+      email: `${validUserId}@smartfinance.app`,
+      department: 'General',
+      designation: 'Employee',
+      joining_date: new Date().toISOString().slice(0, 10),
+      office_location: 'Main Office',
+    }, { onConflict: 'id' });
+
+    const validAttId = (record.id && uuidRegex.test(record.id)) ? record.id : undefined;
+
+    // 3. Upsert attendance row
+    const { data, error } = await supabase
+      .from('attendance')
+      .upsert({
+        ...(validAttId ? { id: validAttId } : {}),
+        employee_id: validEmpId,
+        attendance_date: record.attendanceDate,
+        check_in: record.checkIn || null,
+        check_out: record.checkOut || null,
+        total_work_minutes: record.totalWorkMinutes || 0,
+        break_minutes: record.breakMinutes || 0,
+        overtime_minutes: record.overtimeMinutes || 0,
+        late_minutes: record.lateMinutes || 0,
+        early_leave_minutes: record.earlyLeaveMinutes || 0,
+        status: record.status || 'Present',
+        notes: record.notes || null,
+      }, { onConflict: 'employee_id,attendance_date' })
+      .select();
+
+    if (error) throw error;
+
+    // 4. Save breaks if present
+    if (data && data[0] && record.breaks && record.breaks.length > 0) {
+      const attId = data[0].id;
+      for (const br of record.breaks) {
+        const breakId = (br.id && uuidRegex.test(br.id)) ? br.id : undefined;
+        await supabase.from('attendance_breaks').upsert({
+          ...(breakId ? { id: breakId } : {}),
+          attendance_id: attId,
+          break_start: br.breakStart,
+          break_end: br.breakEnd || null,
+          duration_minutes: br.durationMinutes || 0,
+          break_type: br.breakType || 'Other',
+        });
+      }
+    }
+
+    return { success: true, data };
+  } catch (err) {
+    console.warn('[Supabase] Attendance save error:', err);
+    return { success: false, error: err };
+  }
+}
+
+export async function fetchAttendanceFromSupabase(userId: string) {
+  try {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = (userId && uuidRegex.test(userId))
+      ? userId
+      : '00000000-0000-4000-a000-000000000001';
+
+    const empRes = await supabase.from('employees').select('id').eq('user_id', validUserId).maybeSingle();
+    const empId = empRes.data?.id;
+
+    let query = supabase.from('attendance').select('*, attendance_breaks(*)');
+    if (empId) {
+      query = query.eq('employee_id', empId);
+    }
+
+    const { data, error } = await query.order('attendance_date', { ascending: false });
+    if (error) throw error;
+
+    const records: AttendanceRecord[] = (data || []).map((row: any) => ({
+      id: row.id,
+      employeeId: row.employee_id,
+      attendanceDate: row.attendance_date,
+      checkIn: row.check_in,
+      checkOut: row.check_out,
+      totalWorkMinutes: row.total_work_minutes || 0,
+      breakMinutes: row.break_minutes || 0,
+      overtimeMinutes: row.overtime_minutes || 0,
+      lateMinutes: row.late_minutes || 0,
+      earlyLeaveMinutes: row.early_leave_minutes || 0,
+      status: row.status as AttendanceStatus,
+      notes: row.notes || '',
+      breaks: (row.attendance_breaks || []).map((b: any) => ({
+        id: b.id,
+        attendanceId: b.attendance_id,
+        breakStart: b.break_start,
+        breakEnd: b.break_end,
+        durationMinutes: b.duration_minutes || 0,
+        breakType: b.break_type || 'Other',
+      })),
+      createdAt: row.created_at,
+    }));
+
+    return { success: true, data: records };
+  } catch (err) {
+    console.warn('[Supabase] Attendance fetch error:', err);
+    return { success: false, data: [] };
   }
 }

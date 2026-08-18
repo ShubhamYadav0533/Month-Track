@@ -34,6 +34,7 @@ export function AttendanceDashboard() {
     startBreak,
     resumeWork,
     checkOut,
+    loadAttendanceFromSupabase,
     getStats,
     getTodayStatus,
     getLiveWorkingMinutes,
@@ -45,6 +46,10 @@ export function AttendanceDashboard() {
   const [liveBreakMins, setLiveBreakMins] = useState(0);
   const stats = getStats();
   const todayStatus = getTodayStatus();
+
+  useEffect(() => {
+    loadAttendanceFromSupabase();
+  }, [loadAttendanceFromSupabase]);
 
   // Live timer — updates every second
   useEffect(() => {
