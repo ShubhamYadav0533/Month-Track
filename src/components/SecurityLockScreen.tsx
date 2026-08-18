@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, StyleSheet, Platform, Alert } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { Fingerprint, Lock, Delete } from 'lucide-react-native';
@@ -12,7 +12,20 @@ export function SecurityLockScreen() {
   const handleBiometricAuth = async () => {
     try {
       if (Platform.OS === 'web') {
-        // Fallback for Web browser testing
+        const hasHardware = await LocalAuthentication.hasHardwareAsync().catch(() => false);
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync().catch(() => false);
+
+        if (hasHardware && isEnrolled) {
+          const result = await LocalAuthentication.authenticateAsync({
+            promptMessage: 'Unlock Personal OS with Fingerprint / Face ID',
+            fallbackLabel: 'Use 4-Digit PIN',
+          });
+          if (result.success) {
+            useFinanceStore.setState({ isLocked: false });
+            return;
+          }
+        }
+        // Web fallback
         useFinanceStore.setState({ isLocked: false });
         return;
       }
@@ -33,7 +46,6 @@ export function SecurityLockScreen() {
           setErrorMsg('Fingerprint authentication cancelled or failed.');
         }
       } else {
-        // Fallback if device has no biometric hardware enrolled
         useFinanceStore.setState({ isLocked: false });
       }
     } catch (err) {
@@ -61,7 +73,7 @@ export function SecurityLockScreen() {
         const success = unlockApp(newPin);
         if (!success) {
           setErrorMsg('Incorrect 4-Digit PIN. Please try again.');
-          setPin('');
+          setTimeout(() => setPin(''), 400);
         }
       }
     }
@@ -70,6 +82,26 @@ export function SecurityLockScreen() {
   const handleDelete = () => {
     setPin((prev) => prev.slice(0, -1));
     setErrorMsg('');
+  };
+
+  const handleEmergencyReset = () => {
+    Alert.alert(
+      'Reset Security Passcode',
+      'Are you sure you want to disable the security lock and unlock the app?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset & Unlock',
+          style: 'destructive',
+          onPress: () => {
+            useFinanceStore.setState({
+              isLocked: false,
+              profile: { ...profile, pinCode: undefined, isBiometricsEnabled: false },
+            });
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -113,6 +145,12 @@ export function SecurityLockScreen() {
             <Delete size={22} color="#ffffff" />
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity style={{ marginTop: 24, padding: 8 }} onPress={handleEmergencyReset}>
+          <Text style={{ color: '#64748b', fontSize: 13, textDecorationLine: 'underline' }}>
+            Forgot PIN / Emergency Reset
+          </Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );

@@ -13,6 +13,7 @@ import { AttendanceDashboard } from '../components/AttendanceDashboard';
 import { CalendarScreen } from '../components/CalendarScreen';
 import { NotificationsScreen } from '../components/NotificationsScreen';
 import { SettingsExportScreen } from '../components/SettingsExportScreen';
+import { LeaveManagementScreen } from '../components/LeaveManagementScreen';
 
 import {
   LayoutDashboard,
@@ -22,6 +23,7 @@ import {
   Calendar as CalendarIcon,
   Bell,
   User,
+  Palmtree,
 } from 'lucide-react-native';
 
 type UnifiedTab =
@@ -29,6 +31,7 @@ type UnifiedTab =
   | 'tasks'
   | 'expenses'
   | 'attendance'
+  | 'leaves'
   | 'calendar'
   | 'notifications'
   | 'profile';
@@ -47,6 +50,7 @@ export default function MainApp() {
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} color={currentTab === 'dashboard' ? '#10b981' : '#64748b'} />, mode: 'all' },
     { id: 'expenses', label: 'Expenses', icon: <DollarSign size={20} color={currentTab === 'expenses' ? '#10b981' : '#64748b'} />, mode: 'finance' },
     { id: 'attendance', label: 'Attendance', icon: <Clock size={20} color={currentTab === 'attendance' ? '#10b981' : '#64748b'} />, mode: 'hrms' },
+    { id: 'leaves', label: 'Leaves', icon: <Palmtree size={20} color={currentTab === 'leaves' ? '#10b981' : '#64748b'} />, mode: 'all' },
     { id: 'tasks', label: 'Tasks', icon: <CheckSquare size={20} color={currentTab === 'tasks' ? '#10b981' : '#64748b'} />, mode: 'hrms' },
     { id: 'calendar', label: 'Calendar', icon: <CalendarIcon size={20} color={currentTab === 'calendar' ? '#10b981' : '#64748b'} />, mode: 'all' },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={20} color={currentTab === 'notifications' ? '#10b981' : '#64748b'} />, mode: 'all' },
@@ -76,6 +80,7 @@ export default function MainApp() {
         {activeTab === 'tasks' && <EnhancedTasksScreen />}
         {activeTab === 'expenses' && <TransactionsScreen />}
         {activeTab === 'attendance' && <AttendanceDashboard />}
+        {activeTab === 'leaves' && <LeaveManagementScreen />}
         {activeTab === 'calendar' && <CalendarScreen />}
         {activeTab === 'notifications' && <NotificationsScreen />}
         {activeTab === 'profile' && <SettingsExportScreen />}

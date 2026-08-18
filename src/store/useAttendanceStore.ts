@@ -17,6 +17,9 @@ import { useFinanceStore } from './useFinanceStore';
 import {
   saveAttendanceToSupabase,
   fetchAttendanceFromSupabase,
+  saveLeaveToSupabase,
+  fetchLeavesFromSupabase,
+  deleteLeaveFromSupabase,
 } from '../services/supabaseService';
 
 // ─────────────────────────────────────────────────
@@ -347,9 +350,14 @@ export const useAttendanceStore = create<AttendanceState>()(
             saveAttendanceToSupabase(userId, currentRecord);
           }
         }
+
+        // Fetch leave requests from Supabase
+        const leaveRes = await fetchLeavesFromSupabase(userId);
+        if (leaveRes.success && leaveRes.data && leaveRes.data.length > 0) {
+          set({ leaveRequests: leaveRes.data });
+        }
       },
 
-      
       applyLeave: (leave) =>
         set((s) => {
           const request: LeaveRequest = {
@@ -366,6 +374,9 @@ export const useAttendanceStore = create<AttendanceState>()(
           if (typeKey in balances) {
             balances[typeKey] = Math.max(0, balances[typeKey] - leave.totalDays);
           }
+
+          const userId = useFinanceStore.getState().profile.id;
+          saveLeaveToSupabase(userId, request);
 
           return {
             leaveRequests: [...s.leaveRequests, request],
@@ -385,6 +396,8 @@ export const useAttendanceStore = create<AttendanceState>()(
           if (typeKey in balances) {
             balances[typeKey] += leave.totalDays;
           }
+
+          deleteLeaveFromSupabase(leaveId);
 
           return {
             leaveRequests: s.leaveRequests.filter((l) => l.id !== leaveId),

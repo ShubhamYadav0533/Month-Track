@@ -18,6 +18,9 @@ import {
   PaymentMethod,
   AttendanceRecord,
   AttendanceStatus,
+  LeaveRequest,
+  LeaveType,
+  LeaveStatus,
 } from '../types';
 import {
   NotificationRecord,
@@ -856,5 +859,106 @@ export async function fetchAttendanceFromSupabase(userId: string) {
   } catch (err) {
     console.warn('[Supabase] Attendance fetch error:', err);
     return { success: false, data: [] };
+  }
+}
+
+export async function saveLeaveToSupabase(userId: string, leave: LeaveRequest) {
+  try {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = (userId && uuidRegex.test(userId)) ? userId : '00000000-0000-4000-a000-000000000001';
+    const validEmpId = (leave.employeeId && uuidRegex.test(leave.employeeId)) ? leave.employeeId : '00000000-0000-4000-a000-000000000001';
+
+    // 1. Ensure user row
+    await supabase.from('users').upsert({
+      id: validUserId,
+      name: 'User',
+      email: `${validUserId}@smartfinance.app`,
+      monthly_income: 0,
+      salary_date: 1,
+      savings_goal: 0,
+      currency: '₹',
+    });
+
+    // 2. Ensure employee row
+    await supabase.from('employees').upsert({
+      id: validEmpId,
+      user_id: validUserId,
+      employee_code: 'EMP001',
+      full_name: 'Employee',
+      email: `${validUserId}@smartfinance.app`,
+      department: 'General',
+      designation: 'Employee',
+      joining_date: new Date().toISOString().slice(0, 10),
+      office_location: 'Main Office',
+    }, { onConflict: 'id' });
+
+    const validLeaveId = (leave.id && uuidRegex.test(leave.id)) ? leave.id : undefined;
+
+    // 3. Upsert leave_requests row
+    const { data, error } = await supabase
+      .from('leave_requests')
+      .upsert({
+        ...(validLeaveId ? { id: validLeaveId } : {}),
+        employee_id: validEmpId,
+        leave_type: leave.leaveType,
+        start_date: leave.startDate,
+        end_date: leave.endDate,
+        total_days: leave.totalDays,
+        reason: leave.reason,
+        status: leave.status || 'Pending',
+      })
+      .select();
+
+    if (error) throw error;
+    return { success: true, data };
+  } catch (err) {
+    console.warn('[Supabase] Leave save error:', err);
+    return { success: false, error: err };
+  }
+}
+
+export async function fetchLeavesFromSupabase(userId: string) {
+  try {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = (userId && uuidRegex.test(userId)) ? userId : '00000000-0000-4000-a000-000000000001';
+
+    const empRes = await supabase.from('employees').select('id').eq('user_id', validUserId).maybeSingle();
+    const empId = empRes.data?.id;
+
+    let query = supabase.from('leave_requests').select('*');
+    if (empId) {
+      query = query.eq('employee_id', empId);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const records: LeaveRequest[] = (data || []).map((row: any) => ({
+      id: row.id,
+      employeeId: row.employee_id,
+      leaveType: row.leave_type as LeaveType,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      totalDays: parseFloat(row.total_days || 1),
+      reason: row.reason,
+      status: row.status as LeaveStatus,
+      createdAt: row.created_at,
+    }));
+
+    return { success: true, data: records };
+  } catch (err) {
+    console.warn('[Supabase] Leave fetch error:', err);
+    return { success: false, data: [] };
+  }
+}
+
+export async function deleteLeaveFromSupabase(leaveId: string) {
+  try {
+    const { error } = await supabase.from('leave_requests').delete().eq('id', leaveId);
+    if (error) throw error;
+    return { success: true };
+  } catch (err) {
+    console.warn('[Supabase] Leave delete error:', err);
+    return { success: false, error: err };
   }
 }

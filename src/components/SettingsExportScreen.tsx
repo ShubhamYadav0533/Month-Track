@@ -65,16 +65,32 @@ export function SettingsExportScreen() {
     const inc = parseFloat(monthlyIncome);
     const salDay = parseInt(salaryDate, 10);
 
+    if (pinInput && pinInput.length > 0 && pinInput.length !== 4) {
+      Alert.alert('Invalid Passcode', 'Security Passcode PIN must be exactly 4 digits.');
+      return;
+    }
+
     updateProfile({
       name,
       monthlyIncome: isNaN(inc) ? profile.monthlyIncome : inc,
       salaryDate: isNaN(salDay) ? profile.salaryDate : salDay,
       currency,
-      pinCode: pinInput || undefined,
+      pinCode: pinInput.trim() ? pinInput.trim() : undefined,
       isBiometricsEnabled: bioEnabled,
       isDarkMode: darkMode,
     });
-    Alert.alert('Profile Saved', 'Your preferences and security settings have been saved successfully.');
+
+    const lockStatusMsg = pinInput.trim()
+      ? 'Security PIN updated successfully! Your app is now protected.'
+      : 'Profile settings updated successfully.';
+
+    Alert.alert('Settings Saved', lockStatusMsg);
+  };
+
+  const handleClearPin = () => {
+    setPinInput('');
+    updateProfile({ pinCode: undefined });
+    Alert.alert('PIN Removed', 'Passcode protection has been disabled.');
   };
 
   const handleExportCSV = async () => {
@@ -219,12 +235,27 @@ export function SettingsExportScreen() {
             placeholderTextColor="#64748b"
           />
 
-          {profile.pinCode && (
-            <TouchableOpacity style={styles.lockBtn} onPress={lockApp}>
-              <Lock size={16} color="#3b82f6" />
-              <Text style={styles.lockBtnText}>Lock App Now</Text>
-            </TouchableOpacity>
-          )}
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            {(profile.pinCode || profile.isBiometricsEnabled) && (
+              <TouchableOpacity style={[styles.lockBtn, { flex: 1, marginTop: 0 }]} onPress={lockApp}>
+                <Lock size={16} color="#3b82f6" />
+                <Text style={styles.lockBtnText}>Lock App Now</Text>
+              </TouchableOpacity>
+            )}
+
+            {profile.pinCode && (
+              <TouchableOpacity
+                style={[
+                  styles.lockBtn,
+                  { flex: 1, marginTop: 0, backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                ]}
+                onPress={handleClearPin}
+              >
+                <Trash2 size={16} color="#ef4444" />
+                <Text style={[styles.lockBtnText, { color: '#ef4444' }]}>Remove PIN</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Export & Data Backup */}

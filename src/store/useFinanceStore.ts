@@ -575,7 +575,8 @@ export const useFinanceStore = create<FinanceState>()(
       },
 
       lockApp: () => {
-        if (get().profile.pinCode) {
+        const p = get().profile;
+        if (p.pinCode || p.isBiometricsEnabled) {
           set({ isLocked: true });
         }
       },
@@ -599,6 +600,11 @@ export const useFinanceStore = create<FinanceState>()(
     {
       name: 'finance-app-os-clean-v5',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state && (state.profile?.pinCode || state.profile?.isBiometricsEnabled)) {
+          state.isLocked = true;
+        }
+      },
     }
   )
 );
