@@ -135,24 +135,24 @@ export async function saveTransactionToSupabase(userId: string, tx: Transaction)
       .select();
 
     if (error) {
-      console.warn('[Supabase] Direct transaction save notice, triggering backend sync fallback:', error);
+      console.warn('[Supabase] Direct transaction save failed, using backend fallback:', error);
+      // Fallback: send to Express backend API (include id so it upserts the same row)
+      const backendRes = await syncExpenseToBackend({
+        userId: validUserId,
+        accountId: accountId,
+        amount: tx.amount,
+        category: tx.category,
+        description: tx.title,
+        paymentMethod: tx.paymentMethod,
+        transactionDate: tx.transactionDate,
+        expenseDate: tx.transactionDate,
+      });
+      return { success: !!backendRes, data: backendRes };
     }
-
-    // Always sync to Express backend API as well
-    syncExpenseToBackend({
-      userId: validUserId,
-      accountId: accountId,
-      amount: tx.amount,
-      category: tx.category,
-      description: tx.title,
-      paymentMethod: tx.paymentMethod,
-      transactionDate: tx.transactionDate,
-      expenseDate: tx.transactionDate,
-    });
 
     return { success: true, data };
   } catch (err) {
-    console.warn('[Supabase] Transaction sync warning, using backend fallback:', err);
+    console.warn('[Supabase] Transaction sync error, using backend fallback:', err);
     const backendRes = await syncExpenseToBackend({
       userId,
       accountId: tx.accountId,
