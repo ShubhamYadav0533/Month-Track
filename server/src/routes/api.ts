@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { setupUser, getUserProfile } from '../controllers/userController';
-import { getExpenses, createExpense, deleteExpense } from '../controllers/expenseController';
+import { getExpenses, createExpense, deleteExpense, deleteMultipleExpenses } from '../controllers/expenseController';
 import { supabase } from '../config/db';
 
 const router = Router();
@@ -28,6 +28,7 @@ router.get('/accounts', async (req, res) => {
 // Expenses & Transactions Routes
 router.get('/expenses', getExpenses);
 router.post('/expenses', createExpense);
+router.post('/expenses/delete-batch', deleteMultipleExpenses);
 router.delete('/expenses/:id', deleteExpense);
 
 // Tasks Routes

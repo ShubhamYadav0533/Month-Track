@@ -1,6 +1,7 @@
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Check,
   Copy,
   FileText,
   Plus,
@@ -29,7 +30,7 @@ import { AddTransactionModal } from './AddTransactionModal';
 type DateFilter = 'Today' | 'Yesterday' | 'This Week' | 'This Month' | 'All';
 
 export function TransactionsScreen() {
-  const { profile, transactions, deleteTransaction, duplicateTransaction, loadSupabaseData, isLoading } = useFinanceStore();
+  const { profile, transactions, deleteTransaction, deleteMultipleTransactions, duplicateTransaction, loadSupabaseData, isLoading } = useFinanceStore();
 
   const [dateFilter, setDateFilter] = useState<DateFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +38,7 @@ export function TransactionsScreen() {
   const [selectedPaymentMethod] = useState<string>('All');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedTxIds, setSelectedTxIds] = useState<string[]>([]);
 
   useEffect(() => {
     loadSupabaseData();
@@ -128,6 +130,45 @@ export function TransactionsScreen() {
         </View>
       </View>
 
+      {/* Select All & Multi-Delete Controls */}
+      {filteredTransactions.length > 0 && (
+        <View style={styles.selectionBar}>
+          <TouchableOpacity
+            style={styles.selectAllBtn}
+            onPress={() => {
+              const isAll = filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedTxIds.includes(t.id));
+              if (isAll) {
+                setSelectedTxIds([]);
+              } else {
+                setSelectedTxIds(filteredTransactions.map((t) => t.id));
+              }
+            }}
+          >
+            <View style={[styles.checkboxSquare, (filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedTxIds.includes(t.id))) && styles.checkboxSquareChecked]}>
+              {(filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedTxIds.includes(t.id))) && <Check size={12} color="#ffffff" />}
+            </View>
+            <Text style={styles.selectAllText}>
+              {(filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedTxIds.includes(t.id))) ? 'Deselect All' : 'Select All'} ({filteredTransactions.length})
+            </Text>
+          </TouchableOpacity>
+
+          {selectedTxIds.length > 0 && (
+            <TouchableOpacity
+              style={styles.deleteSelectedBtn}
+              onPress={() => {
+                deleteMultipleTransactions(selectedTxIds);
+                setSelectedTxIds([]);
+              }}
+            >
+              <Trash2 size={14} color="#ffffff" />
+              <Text style={styles.deleteSelectedText}>
+                Delete Selected ({selectedTxIds.length})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Transactions List */}
       <ScrollView contentContainerStyle={styles.listContent}>
         {filteredTransactions.length === 0 ? (
@@ -137,12 +178,28 @@ export function TransactionsScreen() {
         ) : (
           filteredTransactions.map((tx) => {
             const isIncome = tx.type === 'Income' || tx.type === 'Borrow';
+            const isSelected = selectedTxIds.includes(tx.id);
             return (
               <TouchableOpacity
                 key={tx.id}
-                style={styles.txRow}
+                style={[styles.txRow, isSelected && styles.txRowSelected]}
                 onPress={() => setSelectedTx(tx)}
               >
+                <TouchableOpacity
+                  style={styles.checkboxTouchable}
+                  onPress={() => {
+                    if (isSelected) {
+                      setSelectedTxIds(selectedTxIds.filter((id) => id !== tx.id));
+                    } else {
+                      setSelectedTxIds([...selectedTxIds, tx.id]);
+                    }
+                  }}
+                >
+                  <View style={[styles.checkboxSquare, isSelected && styles.checkboxSquareChecked]}>
+                    {isSelected && <Check size={12} color="#ffffff" />}
+                  </View>
+                </TouchableOpacity>
+
                 <View style={styles.txLeft}>
                   <View
                     style={[
@@ -517,5 +574,60 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  selectAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  selectAllText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  checkboxSquare: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0f172a',
+  },
+  checkboxSquareChecked: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+  },
+  checkboxTouchable: {
+    paddingRight: 10,
+    paddingVertical: 4,
+  },
+  deleteSelectedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  deleteSelectedText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  txRowSelected: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
 });

@@ -73,3 +73,29 @@ export async function fetchExpensesFromBackend() {
   }
 }
 
+export async function deleteExpenseFromBackend(id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/expenses/${id}`, {
+      method: 'DELETE',
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend delete expense error:', err);
+    return null;
+  }
+}
+
+export async function deleteMultipleExpensesFromBackend(ids: string[]) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/expenses/delete-batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    });
+    return await res.json();
+  } catch (err) {
+    console.warn('Backend batch delete expenses error:', err);
+    return null;
+  }
+}
+

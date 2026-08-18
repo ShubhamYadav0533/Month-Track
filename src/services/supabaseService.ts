@@ -1,5 +1,10 @@
 import { supabase } from '../config/supabaseClient';
-import { fetchExpensesFromBackend, syncExpenseToBackend } from './api';
+import {
+  fetchExpensesFromBackend,
+  syncExpenseToBackend,
+  deleteExpenseFromBackend,
+  deleteMultipleExpensesFromBackend,
+} from './api';
 import {
   UserProfile,
   Account,
@@ -169,10 +174,32 @@ export const saveExpenseToSupabase = (userId: string, tx: Transaction) =>
 export async function deleteTransactionFromSupabase(txId: string) {
   try {
     const { error } = await supabase.from('transactions').delete().eq('id', txId);
-    if (error) throw error;
+    if (error) {
+      console.warn('[Supabase] Direct transaction delete warning, calling backend API fallback:', error);
+    }
+    // Always call backend REST delete as well
+    deleteExpenseFromBackend(txId);
     return { success: true };
   } catch (err) {
-    console.warn('[Supabase] Transaction delete error:', err);
+    console.warn('[Supabase] Transaction delete error, using backend fallback:', err);
+    deleteExpenseFromBackend(txId);
+    return { success: false, error: err };
+  }
+}
+
+export async function deleteMultipleTransactionsFromSupabase(txIds: string[]) {
+  try {
+    if (!txIds || txIds.length === 0) return { success: true };
+    const { error } = await supabase.from('transactions').delete().in('id', txIds);
+    if (error) {
+      console.warn('[Supabase] Direct batch delete warning, calling backend API fallback:', error);
+    }
+    // Always call backend REST batch delete as well
+    deleteMultipleExpensesFromBackend(txIds);
+    return { success: true };
+  } catch (err) {
+    console.warn('[Supabase] Multiple transaction delete error, using backend fallback:', err);
+    deleteMultipleExpensesFromBackend(txIds);
     return { success: false, error: err };
   }
 }

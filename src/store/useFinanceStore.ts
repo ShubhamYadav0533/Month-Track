@@ -22,6 +22,7 @@ import {
   saveAccountsToSupabase,
   saveTransactionToSupabase,
   deleteTransactionFromSupabase,
+  deleteMultipleTransactionsFromSupabase,
   fetchFullUserDataFromSupabase,
   saveBudgetToSupabase,
   saveSavingsGoalToSupabase,
@@ -63,6 +64,7 @@ interface FinanceState {
   addExpense: (expense: Omit<Transaction, 'id' | 'createdAt'>) => void; // alias
   updateTransaction: (id: string, updatedData: Partial<Transaction>) => void;
   deleteTransaction: (id: string) => void;
+  deleteMultipleTransactions: (ids: string[]) => void;
   deleteExpense: (id: string) => void; // alias
   duplicateTransaction: (id: string) => void;
 
@@ -152,21 +154,7 @@ export const useFinanceStore = create<FinanceState>()(
         set({ isLoading: true });
         const res = await fetchFullUserDataFromSupabase(userId);
         if (res.success && res.profile) {
-          const currentLocalTxs = get().transactions;
           const fetchedTxs = res.transactions || [];
-
-          // Sync any local transactions up to Supabase so they are persisted remotely
-          if (currentLocalTxs.length > 0) {
-            currentLocalTxs.forEach((tx) => {
-              saveTransactionToSupabase(userId, tx);
-            });
-          }
-
-          // Merge Supabase transactions and local state without duplicates
-          const txMap = new Map<string, Transaction>();
-          currentLocalTxs.forEach((t) => txMap.set(t.id, t));
-          fetchedTxs.forEach((t) => txMap.set(t.id, t));
-          const finalTxs = Array.from(txMap.values());
 
           set((state) => {
             return {
@@ -179,8 +167,8 @@ export const useFinanceStore = create<FinanceState>()(
                 currency: res.profile.currency || '₹',
                 isSetupComplete: true,
               },
-              transactions: finalTxs,
-              expenses: finalTxs,
+              transactions: fetchedTxs,
+              expenses: fetchedTxs,
               accounts: res.accounts.length > 0
                 ? res.accounts.map((a: any) => ({
                     id: a.id,
@@ -302,6 +290,36 @@ export const useFinanceStore = create<FinanceState>()(
           saveAccountsToSupabase(state.profile.id, updatedAccounts);
 
           const filtered = state.transactions.filter((t) => t.id !== id);
+          return {
+            transactions: filtered,
+            expenses: filtered,
+            accounts: updatedAccounts,
+          };
+        });
+      },
+
+      deleteMultipleTransactions: (ids) => {
+        if (!ids || ids.length === 0) return;
+        const idSet = new Set(ids);
+        set((state) => {
+          let updatedAccounts = state.accounts;
+          state.transactions.forEach((tx) => {
+            if (idSet.has(tx.id)) {
+              updatedAccounts = updatedAccounts.map((acc) => {
+                if (acc.id === tx.accountId) {
+                  return tx.type === 'Income' || tx.type === 'Borrow'
+                    ? { ...acc, balance: Math.max(0, acc.balance - tx.amount) }
+                    : { ...acc, balance: acc.balance + tx.amount };
+                }
+                return acc;
+              });
+            }
+          });
+
+          deleteMultipleTransactionsFromSupabase(ids);
+          saveAccountsToSupabase(state.profile.id, updatedAccounts);
+
+          const filtered = state.transactions.filter((t) => !idSet.has(t.id));
           return {
             transactions: filtered,
             expenses: filtered,
