@@ -169,6 +169,7 @@ export const useFinanceStore = create<FinanceState>()(
                 salaryDate: parseInt(res.profile.salary_date || '1', 10),
                 savingsGoal: parseFloat(res.profile.savings_goal || '0'),
                 currency: res.profile.currency || '₹',
+                defaultAppMode: state.profile.defaultAppMode || 'finance',
                 isSetupComplete: true,
               },
               transactions: fetchedTxs,
