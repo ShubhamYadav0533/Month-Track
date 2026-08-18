@@ -1,12 +1,14 @@
 import { Request, Response } from 'express';
 import { supabase } from '../config/db';
+import { sendSuccess, sendError } from '../utils/response';
 
+// ── POST /user/setup ─────────────────────────────────────────────
 export const setupUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { name, email, monthlyIncome, salaryDate, savingsGoal, currency, walletBal, bankBal, upiBal, cardLimit } = req.body;
     const userEmail = email || `user_${Date.now()}@smartfinance.app`;
 
-    // 1. Upsert User in Supabase DB
+    // 1. Upsert User
     const { data: user, error: userErr } = await supabase
       .from('users')
       .upsert({
@@ -22,7 +24,7 @@ export const setupUser = async (req: Request, res: Response): Promise<void> => {
 
     if (userErr) throw userErr;
 
-    // 2. Insert Accounts in Supabase DB
+    // 2. Create default Accounts
     const defaultAccounts = [
       { user_id: user.id, name: 'Wallet Cash', type: 'wallet', balance: parseFloat(walletBal) || 2000 },
       { user_id: user.id, name: 'Bank Balance', type: 'bank', balance: parseFloat(bankBal) || 8000 },
@@ -38,17 +40,14 @@ export const setupUser = async (req: Request, res: Response): Promise<void> => {
 
     if (accErr) throw accErr;
 
-    res.json({
-      success: true,
-      user,
-      accounts,
-    });
+    sendSuccess(res, { user, accounts }, 201);
   } catch (error: any) {
-    console.error('Supabase Setup User Error:', error);
-    res.status(500).json({ success: false, error: error.message });
+    console.error('[UserController] Setup error:', error);
+    sendError(res, error.message);
   }
 };
 
+// ── GET /user/:userId ────────────────────────────────────────────
 export const getUserProfile = async (req: Request, res: Response): Promise<void> => {
   try {
     const { userId } = req.params;
@@ -59,12 +58,49 @@ export const getUserProfile = async (req: Request, res: Response): Promise<void>
       .maybeSingle();
 
     if (error || !user) {
-      res.status(404).json({ success: false, message: 'User not found' });
+      sendError(res, 'User not found', 404);
       return;
     }
 
-    res.json({ success: true, user });
+    sendSuccess(res, { user });
   } catch (error: any) {
-    res.status(500).json({ success: false, error: error.message });
+    sendError(res, error.message);
+  }
+};
+
+// ── PUT /user/:userId ────────────────────────────────────────────
+export const updateUser = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+    const updates: Record<string, any> = {};
+
+    const fieldMap: Record<string, string> = {
+      name: 'name', email: 'email', monthlyIncome: 'monthly_income',
+      salaryDate: 'salary_date', savingsGoal: 'savings_goal', currency: 'currency',
+    };
+
+    for (const [bodyKey, dbKey] of Object.entries(fieldMap)) {
+      if (req.body[bodyKey] !== undefined) {
+        if (bodyKey === 'monthlyIncome' || bodyKey === 'savingsGoal') {
+          updates[dbKey] = parseFloat(req.body[bodyKey]);
+        } else if (bodyKey === 'salaryDate') {
+          updates[dbKey] = parseInt(req.body[bodyKey], 10);
+        } else {
+          updates[dbKey] = req.body[bodyKey];
+        }
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      sendError(res, 'No fields to update', 400);
+      return;
+    }
+
+    const { data, error } = await supabase.from('users').update(updates).eq('id', userId).select().single();
+    if (error) throw error;
+
+    sendSuccess(res, { user: data });
+  } catch (error: any) {
+    sendError(res, error.message);
   }
 };
