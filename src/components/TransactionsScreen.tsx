@@ -1,34 +1,36 @@
-import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  SafeAreaView,
-  Modal,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Check,
+  Copy,
+  FileText,
+  Plus,
+  RefreshCw,
+  Search,
+  Trash2,
+  X,
+} from 'lucide-react-native';
+import React, { useState, useEffect } from 'react';
+import {
   Image,
+  Modal,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { Transaction } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import { AddTransactionModal } from './AddTransactionModal';
-import {
-  Search,
-  Plus,
-  Trash2,
-  Copy,
-  FileText,
-  X,
-  ArrowUpRight,
-  ArrowDownLeft,
-} from 'lucide-react-native';
 
 type DateFilter = 'Today' | 'Yesterday' | 'This Week' | 'This Month' | 'All';
 
 export function TransactionsScreen() {
-  const { profile, transactions, deleteTransaction, duplicateTransaction } = useFinanceStore();
+  const { profile, transactions, deleteTransaction, deleteMultipleTransactions, duplicateTransaction, loadSupabaseData, isLoading } = useFinanceStore();
 
   const [dateFilter, setDateFilter] = useState<DateFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -36,6 +38,11 @@ export function TransactionsScreen() {
   const [selectedPaymentMethod] = useState<string>('All');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedTxIds, setSelectedTxIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    loadSupabaseData();
+  }, [loadSupabaseData]);
 
   const todayStr = getFormattedDate();
 
@@ -66,21 +73,31 @@ export function TransactionsScreen() {
   });
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleRow}>
           <Text style={styles.title}>Transactions History</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => setIsAddModalOpen(true)}>
-            <Plus size={16} color="#ffffff" />
-            <Text style={styles.addBtnText}>+ Transaction</Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity style={styles.syncBtn} onPress={loadSupabaseData}>
+              <RefreshCw size={16} color="#10b981" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addBtn} onPress={() => setIsAddModalOpen(true)}>
+              <Plus size={16} color="#ffffff" />
+              <Text style={styles.addBtnText}>Add Transaction</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <Text style={styles.subtitle}>Detailed Google Pay + Excel style ledger of your activity</Text>
       </View>
 
       {/* Date Filter Tabs */}
-      <View style={styles.filterTabsRow}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterTabsScrollView}
+        contentContainerStyle={styles.filterTabsRow}
+      >
         {(['Today', 'Yesterday', 'This Week', 'This Month', 'All'] as DateFilter[]).map((tab) => (
           <TouchableOpacity
             key={tab}
@@ -92,7 +109,7 @@ export function TransactionsScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
 
       {/* Search & Sub-filters */}
       <View style={styles.searchContainer}>
@@ -113,6 +130,45 @@ export function TransactionsScreen() {
         </View>
       </View>
 
+      {/* Select All & Multi-Delete Controls */}
+      {filteredTransactions.length > 0 && (
+        <View style={styles.selectionBar}>
+          <TouchableOpacity
+            style={styles.selectAllBtn}
+            onPress={() => {
+              const isAll = filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedTxIds.includes(t.id));
+              if (isAll) {
+                setSelectedTxIds([]);
+              } else {
+                setSelectedTxIds(filteredTransactions.map((t) => t.id));
+              }
+            }}
+          >
+            <View style={[styles.checkboxSquare, (filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedTxIds.includes(t.id))) && styles.checkboxSquareChecked]}>
+              {(filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedTxIds.includes(t.id))) && <Check size={12} color="#ffffff" />}
+            </View>
+            <Text style={styles.selectAllText}>
+              {(filteredTransactions.length > 0 && filteredTransactions.every((t) => selectedTxIds.includes(t.id))) ? 'Deselect All' : 'Select All'} ({filteredTransactions.length})
+            </Text>
+          </TouchableOpacity>
+
+          {selectedTxIds.length > 0 && (
+            <TouchableOpacity
+              style={styles.deleteSelectedBtn}
+              onPress={() => {
+                deleteMultipleTransactions(selectedTxIds);
+                setSelectedTxIds([]);
+              }}
+            >
+              <Trash2 size={14} color="#ffffff" />
+              <Text style={styles.deleteSelectedText}>
+                Delete Selected ({selectedTxIds.length})
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       {/* Transactions List */}
       <ScrollView contentContainerStyle={styles.listContent}>
         {filteredTransactions.length === 0 ? (
@@ -122,12 +178,28 @@ export function TransactionsScreen() {
         ) : (
           filteredTransactions.map((tx) => {
             const isIncome = tx.type === 'Income' || tx.type === 'Borrow';
+            const isSelected = selectedTxIds.includes(tx.id);
             return (
               <TouchableOpacity
                 key={tx.id}
-                style={styles.txRow}
+                style={[styles.txRow, isSelected && styles.txRowSelected]}
                 onPress={() => setSelectedTx(tx)}
               >
+                <TouchableOpacity
+                  style={styles.checkboxTouchable}
+                  onPress={() => {
+                    if (isSelected) {
+                      setSelectedTxIds(selectedTxIds.filter((id) => id !== tx.id));
+                    } else {
+                      setSelectedTxIds([...selectedTxIds, tx.id]);
+                    }
+                  }}
+                >
+                  <View style={[styles.checkboxSquare, isSelected && styles.checkboxSquareChecked]}>
+                    {isSelected && <Check size={12} color="#ffffff" />}
+                  </View>
+                </TouchableOpacity>
+
                 <View style={styles.txLeft}>
                   <View
                     style={[
@@ -142,8 +214,8 @@ export function TransactionsScreen() {
                     )}
                   </View>
                   <View style={styles.txInfo}>
-                    <Text style={styles.txTitle}>{tx.title}</Text>
-                    <Text style={styles.txMeta}>
+                    <Text style={styles.txTitle} numberOfLines={1} ellipsizeMode="tail">{tx.title}</Text>
+                    <Text style={styles.txMeta} numberOfLines={1} ellipsizeMode="tail">
                       {tx.transactionDate} • {tx.category} • {tx.paymentMethod}
                     </Text>
                   </View>
@@ -238,7 +310,7 @@ export function TransactionsScreen() {
 
       {/* Add Transaction Modal */}
       <AddTransactionModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -256,11 +328,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   title: {
     fontSize: 22,
     fontWeight: '800',
     color: '#f8fafc',
+    flexShrink: 1,
   },
   subtitle: {
     fontSize: 12,
@@ -281,20 +356,33 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
+  filterTabsScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 44,
+    marginVertical: 6,
+  },
   filterTabsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 18,
-    marginVertical: 10,
     gap: 8,
+    height: 44,
   },
   filterTab: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
     backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 34,
   },
   filterTabActive: {
     backgroundColor: '#10b981',
+    borderColor: '#10b981',
   },
   filterTabText: {
     fontSize: 12,
@@ -303,6 +391,7 @@ const styles = StyleSheet.create({
   },
   filterTabTextActive: {
     color: '#ffffff',
+    fontWeight: '700',
   },
   searchContainer: {
     paddingHorizontal: 18,
@@ -348,30 +437,37 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
   txLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    marginRight: 8,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  txInfo: {},
+  txInfo: {
+    flex: 1,
+  },
   txTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#f8fafc',
   },
   txMeta: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#94a3b8',
     marginTop: 2,
   },
   txRight: {
     alignItems: 'flex-end',
+    flexShrink: 0,
+    marginLeft: 4,
   },
   txAmount: {
     fontSize: 15,
@@ -471,5 +567,67 @@ const styles = StyleSheet.create({
   actionText: {
     fontWeight: '700',
     fontSize: 14,
+  },
+  syncBtn: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    padding: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  selectionBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 18,
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  selectAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 4,
+  },
+  selectAllText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  checkboxSquare: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#0f172a',
+  },
+  checkboxSquareChecked: {
+    backgroundColor: '#10b981',
+    borderColor: '#10b981',
+  },
+  checkboxTouchable: {
+    paddingRight: 10,
+    paddingVertical: 4,
+  },
+  deleteSelectedBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  deleteSelectedText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  txRowSelected: {
+    borderColor: '#10b981',
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
   },
 });

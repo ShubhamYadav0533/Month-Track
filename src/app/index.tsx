@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, StatusBar, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { SecurityLockScreen } from '../components/SecurityLockScreen';
 import { SetupWizard } from '../components/SetupWizard';
@@ -12,6 +13,7 @@ import { AttendanceDashboard } from '../components/AttendanceDashboard';
 import { CalendarScreen } from '../components/CalendarScreen';
 import { NotificationsScreen } from '../components/NotificationsScreen';
 import { SettingsExportScreen } from '../components/SettingsExportScreen';
+import { LeaveManagementScreen } from '../components/LeaveManagementScreen';
 
 import {
   LayoutDashboard,
@@ -21,6 +23,7 @@ import {
   Calendar as CalendarIcon,
   Bell,
   User,
+  Palmtree,
 } from 'lucide-react-native';
 
 type UnifiedTab =
@@ -28,13 +31,18 @@ type UnifiedTab =
   | 'tasks'
   | 'expenses'
   | 'attendance'
+  | 'leaves'
   | 'calendar'
   | 'notifications'
   | 'profile';
 
 export default function MainApp() {
-  const { profile, isLocked } = useFinanceStore();
+  const { profile, isLocked, loadSupabaseData } = useFinanceStore();
   const [currentTab, setCurrentTab] = useState<UnifiedTab>('dashboard');
+
+  useEffect(() => {
+    loadSupabaseData();
+  }, [loadSupabaseData]);
 
   const appMode = profile.defaultAppMode || 'finance';
 
@@ -42,6 +50,7 @@ export default function MainApp() {
     { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={20} color={currentTab === 'dashboard' ? '#10b981' : '#64748b'} />, mode: 'all' },
     { id: 'expenses', label: 'Expenses', icon: <DollarSign size={20} color={currentTab === 'expenses' ? '#10b981' : '#64748b'} />, mode: 'finance' },
     { id: 'attendance', label: 'Attendance', icon: <Clock size={20} color={currentTab === 'attendance' ? '#10b981' : '#64748b'} />, mode: 'hrms' },
+    { id: 'leaves', label: 'Leaves', icon: <Palmtree size={20} color={currentTab === 'leaves' ? '#10b981' : '#64748b'} />, mode: 'all' },
     { id: 'tasks', label: 'Tasks', icon: <CheckSquare size={20} color={currentTab === 'tasks' ? '#10b981' : '#64748b'} />, mode: 'hrms' },
     { id: 'calendar', label: 'Calendar', icon: <CalendarIcon size={20} color={currentTab === 'calendar' ? '#10b981' : '#64748b'} />, mode: 'all' },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={20} color={currentTab === 'notifications' ? '#10b981' : '#64748b'} />, mode: 'all' },
@@ -49,12 +58,7 @@ export default function MainApp() {
   ];
 
   const unifiedTabs = allTabs.filter(t => t.mode === 'all' || t.mode === appMode);
-
-  useEffect(() => {
-    if (!unifiedTabs.some(t => t.id === currentTab)) {
-      setCurrentTab('dashboard');
-    }
-  }, [appMode]);
+  const activeTab = unifiedTabs.some(t => t.id === currentTab) ? currentTab : 'dashboard';
 
   // Guard 1: Passcode Security Lock
   if (isLocked) {
@@ -72,13 +76,14 @@ export default function MainApp() {
 
       {/* Screen Content Render */}
       <View style={styles.content}>
-        {currentTab === 'dashboard' && <UnifiedDashboard />}
-        {currentTab === 'tasks' && <EnhancedTasksScreen />}
-        {currentTab === 'expenses' && <TransactionsScreen />}
-        {currentTab === 'attendance' && <AttendanceDashboard />}
-        {currentTab === 'calendar' && <CalendarScreen />}
-        {currentTab === 'notifications' && <NotificationsScreen />}
-        {currentTab === 'profile' && <SettingsExportScreen />}
+        {activeTab === 'dashboard' && <UnifiedDashboard />}
+        {activeTab === 'tasks' && <EnhancedTasksScreen />}
+        {activeTab === 'expenses' && <TransactionsScreen />}
+        {activeTab === 'attendance' && <AttendanceDashboard />}
+        {activeTab === 'leaves' && <LeaveManagementScreen />}
+        {activeTab === 'calendar' && <CalendarScreen />}
+        {activeTab === 'notifications' && <NotificationsScreen />}
+        {activeTab === 'profile' && <SettingsExportScreen />}
       </View>
 
       {/* Primary OS Bottom Navigation Bar */}
@@ -91,11 +96,11 @@ export default function MainApp() {
           {unifiedTabs.map((t) => (
             <TouchableOpacity
               key={t.id}
-              style={[styles.navItem, currentTab === t.id && styles.navItemActive]}
+              style={[styles.navItem, activeTab === t.id && styles.navItemActive]}
               onPress={() => setCurrentTab(t.id)}
             >
               {t.icon}
-              <Text style={[styles.navText, currentTab === t.id && styles.navTextActive]}>
+              <Text style={[styles.navText, activeTab === t.id && styles.navTextActive]}>
                 {t.label}
               </Text>
             </TouchableOpacity>

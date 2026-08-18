@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   Modal,
 } from 'react-native';
 import {
@@ -21,6 +20,7 @@ import {
   RotateCw,
 } from 'lucide-react-native';
 import { useProductivityStore } from '../store/useProductivityStore';
+import { useFinanceStore } from '../store/useFinanceStore';
 import { TaskPriority, RepeatType } from '../types/productivity';
 
 export function EnhancedTasksScreen() {
@@ -30,6 +30,11 @@ export function EnhancedTasksScreen() {
     deleteEnhancedTask,
     toggleTaskComplete,
   } = useProductivityStore();
+  const { loadSupabaseData } = useFinanceStore();
+
+  useEffect(() => {
+    loadSupabaseData();
+  }, [loadSupabaseData]);
 
   const [filterSection, setFilterSection] = useState<'Today' | 'Upcoming' | 'Important' | 'Completed' | 'All'>('Today');
   const [modalVisible, setModalVisible] = useState(false);
@@ -85,10 +90,10 @@ export function EnhancedTasksScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <View>
+        <View style={{ flexShrink: 1 }}>
           <Text style={styles.title}>✅ Task Management</Text>
           <Text style={styles.subtitle}>Organize your daily tasks, reminders & priorities</Text>
         </View>
@@ -278,13 +283,13 @@ export function EnhancedTasksScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f172a' },
-  header: { padding: 20, paddingBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: { padding: 20, paddingBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 },
   title: { fontSize: 22, color: '#f8fafc', fontWeight: '800' },
   subtitle: { fontSize: 12, color: '#94a3b8', marginTop: 2 },
   addBtn: { backgroundColor: '#10b981', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  Modal,
 } from 'react-native';
 import {
   Clock,
@@ -21,8 +22,12 @@ import {
   MapPin,
   FileText,
   Award,
+  Plus,
+  Palmtree,
+  X,
 } from 'lucide-react-native';
 import { useAttendanceStore, formatMinutesToHM } from '../store/useAttendanceStore';
+import { LeaveManagementScreen } from './LeaveManagementScreen';
 
 export function AttendanceDashboard() {
   const {
@@ -34,6 +39,7 @@ export function AttendanceDashboard() {
     startBreak,
     resumeWork,
     checkOut,
+    loadAttendanceFromSupabase,
     getStats,
     getTodayStatus,
     getLiveWorkingMinutes,
@@ -43,8 +49,13 @@ export function AttendanceDashboard() {
 
   const [liveWorkMins, setLiveWorkMins] = useState(0);
   const [liveBreakMins, setLiveBreakMins] = useState(0);
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
   const stats = getStats();
   const todayStatus = getTodayStatus();
+
+  useEffect(() => {
+    loadAttendanceFromSupabase();
+  }, [loadAttendanceFromSupabase]);
 
   // Live timer — updates every second
   useEffect(() => {
@@ -191,20 +202,57 @@ export function AttendanceDashboard() {
           </View>
         </View>
 
-        {/* Leave Balance */}
-        <Text style={styles.sectionTitle}>🏖️ Leave Balance</Text>
+        {/* Leave Balance Header */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>🏖️ Leave Balance</Text>
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              backgroundColor: '#10b981',
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+              borderRadius: 10,
+            }}
+            onPress={() => setShowLeaveModal(true)}
+          >
+            <Plus size={14} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>Apply / View Leaves</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.leaveRow}>
           {[
             { label: 'Casual', value: leaveBalances.casual, color: '#10b981' },
             { label: 'Sick', value: leaveBalances.sick, color: '#f59e0b' },
             { label: 'Paid', value: leaveBalances.paid, color: '#3b82f6' },
           ].map((lb) => (
-            <View key={lb.label} style={[styles.leaveCard, { borderLeftColor: lb.color }]}>
+            <TouchableOpacity
+              key={lb.label}
+              style={[styles.leaveCard, { borderLeftColor: lb.color }]}
+              onPress={() => setShowLeaveModal(true)}
+            >
               <Text style={[styles.leaveValue, { color: lb.color }]}>{lb.value}</Text>
               <Text style={styles.leaveLabel}>{lb.label}</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
+
+        {/* Leave Management Modal */}
+        <Modal visible={showLeaveModal} animationType="slide" presentationStyle="pageSheet">
+          <View style={{ flex: 1, backgroundColor: '#0f172a' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', padding: 16, borderBottomWidth: 1, borderColor: '#334155' }}>
+              <TouchableOpacity
+                style={{ padding: 6, backgroundColor: '#1e293b', borderRadius: 20 }}
+                onPress={() => setShowLeaveModal(false)}
+              >
+                <X size={20} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+            <LeaveManagementScreen />
+          </View>
+        </Modal>
 
         {/* Check-in details if active */}
         {isCheckedIn && todayRecord?.checkIn && (

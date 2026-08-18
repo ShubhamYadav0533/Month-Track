@@ -9,7 +9,13 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from 'react-native';
-import { useFinanceStore } from '../store/useFinanceStore';
+import {
+  useFinanceStore,
+  DEFAULT_ACC_UPI,
+  DEFAULT_ACC_BANK,
+  DEFAULT_ACC_WALLET,
+  DEFAULT_ACC_CARD,
+} from '../store/useFinanceStore';
 import { ExpenseCategory, TransactionType, PaymentMethod } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
 import { parseReceiptImage } from '../utils/ocrParser';
@@ -48,11 +54,11 @@ const TYPES: { name: TransactionType; color: string }[] = [
 ];
 
 const PAYMENT_METHODS: { name: PaymentMethod; icon: string; accountId: string }[] = [
-  { name: 'UPI', icon: '📱', accountId: 'acc_upi' },
-  { name: 'Bank', icon: '🏦', accountId: 'acc_bank' },
-  { name: 'Wallet', icon: '👛', accountId: 'acc_wallet' },
-  { name: 'Credit Card', icon: '💳', accountId: 'acc_card' },
-  { name: 'Cash', icon: '💵', accountId: 'acc_wallet' },
+  { name: 'UPI', icon: '📱', accountId: DEFAULT_ACC_UPI },
+  { name: 'Bank', icon: '🏦', accountId: DEFAULT_ACC_BANK },
+  { name: 'Wallet', icon: '👛', accountId: DEFAULT_ACC_WALLET },
+  { name: 'Credit Card', icon: '💳', accountId: DEFAULT_ACC_CARD },
+  { name: 'Cash', icon: '💵', accountId: DEFAULT_ACC_WALLET },
 ];
 
 interface Props {
@@ -78,37 +84,44 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
   const [tags] = useState('');
   const [receiptUrl, setReceiptUrl] = useState<string | undefined>();
   const [isScanning, setIsScanning] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = () => {
+    if (isSaving) return;
     const numAmount = parseFloat(amount);
     if (isNaN(numAmount) || numAmount <= 0) return;
 
-    const selectedAcc = PAYMENT_METHODS.find((p) => p.name === paymentMethod);
-    const accountId = selectedAcc ? selectedAcc.accountId : accounts[0]?.id || 'acc_upi';
+    setIsSaving(true);
+    try {
+      const selectedAcc = PAYMENT_METHODS.find((p) => p.name === paymentMethod);
+      const accountId = selectedAcc ? selectedAcc.accountId : accounts[0]?.id || 'acc_upi';
 
-    addTransaction({
-      title: title || `${type}: ${category}`,
-      amount: numAmount,
-      type,
-      category,
-      subCategory,
-      accountId,
-      paymentMethod,
-      transactionDate: date || getFormattedDate(),
-      time,
-      recurring,
-      location,
-      notes,
-      tags: tags ? tags.split(',').map((t) => t.trim()) : [],
-      attachment: receiptUrl,
-    });
+      addTransaction({
+        title: title || `${type}: ${category}`,
+        amount: numAmount,
+        type,
+        category,
+        subCategory,
+        accountId,
+        paymentMethod,
+        transactionDate: date || getFormattedDate(),
+        time,
+        recurring,
+        location,
+        notes,
+        tags: tags ? tags.split(',').map((t) => t.trim()) : [],
+        attachment: receiptUrl,
+      });
 
-    // Reset & Close
-    setTitle('');
-    setAmount('');
-    setNotes('');
-    setReceiptUrl(undefined);
-    onClose();
+      // Reset & Close
+      setTitle('');
+      setAmount('');
+      setNotes('');
+      setReceiptUrl(undefined);
+      onClose();
+    } finally {
+      setTimeout(() => setIsSaving(false), 800);
+    }
   };
 
   const handleSimulateOCR = async () => {
@@ -284,9 +297,19 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
             />
 
             {/* Save Button */}
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSave}>
-              <Check size={20} color="#ffffff" />
-              <Text style={styles.saveBtnText}>Save Transaction</Text>
+            <TouchableOpacity
+              style={[styles.saveBtn, isSaving && { opacity: 0.6 }]}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <>
+                  <Check size={20} color="#ffffff" />
+                  <Text style={styles.saveBtnText}>Save Transaction</Text>
+                </>
+              )}
             </TouchableOpacity>
           </ScrollView>
         </View>

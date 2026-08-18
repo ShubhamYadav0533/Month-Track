@@ -46,11 +46,12 @@
     "eas-cli": "^21.5.0",
     "eslint": "^8.57.0",
     "eslint-config-expo": "~8.0.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "typescript": "~5.3.3"
   },
   "scripts": {
     "build": "cd server && npm install && npm run build",
-    "server:start": "node server/dist/index.js",
+    "server:start": "cd server && npx ts-node src/index.ts",
     "expo:start": "expo start",
     "web:start": "expo start --web",
     "start": "concurrently --kill-others --names \"server,expo\" --prefix-colors \"blue,green\" \"npm run server:start\" \"npm run expo:start\"",

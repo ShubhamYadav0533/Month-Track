@@ -12,6 +12,16 @@ import {
   AttendanceStats,
 } from '../types';
 
+import { generateId } from '../utils/generateId';
+import { useFinanceStore } from './useFinanceStore';
+import {
+  saveAttendanceToSupabase,
+  fetchAttendanceFromSupabase,
+  saveLeaveToSupabase,
+  fetchLeavesFromSupabase,
+  deleteLeaveFromSupabase,
+} from '../services/supabaseService';
+
 // ─────────────────────────────────────────────────
 // Helper Utilities
 // ─────────────────────────────────────────────────
@@ -25,7 +35,7 @@ function nowISO(): string {
 }
 
 function uuid(): string {
-  return 'att_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
+  return generateId();
 }
 
 /** Parse "09:00 AM" or "18:00" → minutes since midnight */
@@ -96,6 +106,7 @@ interface AttendanceState {
   startBreak: (breakType: BreakRecord['breakType']) => void;
   resumeWork: () => void;
   checkOut: (notes?: string) => void;
+  loadAttendanceFromSupabase: () => Promise<void>;
 
   // Actions — Leave
   applyLeave: (leave: Omit<LeaveRequest, 'id' | 'employeeId' | 'status' | 'createdAt'>) => void;
@@ -199,6 +210,9 @@ export const useAttendanceStore = create<AttendanceState>()(
             createdAt: now.toISOString(),
           };
 
+          const userId = useFinanceStore.getState().profile.id;
+          saveAttendanceToSupabase(userId, record);
+
           return { todayRecord: record };
         }),
 
@@ -215,9 +229,18 @@ export const useAttendanceStore = create<AttendanceState>()(
             breakType,
           };
 
+          const updatedRec = {
+            ...s.todayRecord,
+            status: 'On Break' as AttendanceStatus,
+            breaks: [...(s.todayRecord.breaks || []), br],
+          };
+
+          const userId = useFinanceStore.getState().profile.id;
+          saveAttendanceToSupabase(userId, updatedRec);
+
           return {
             activeBreak: br,
-            todayRecord: { ...s.todayRecord, status: 'On Break' },
+            todayRecord: updatedRec,
           };
         }),
 
@@ -233,17 +256,22 @@ export const useAttendanceStore = create<AttendanceState>()(
             durationMinutes: duration,
           };
 
-          const updatedBreaks = [...(s.todayRecord.breaks || []), finishedBreak];
+          const updatedBreaks = [...(s.todayRecord.breaks || []).filter(b => b.id !== finishedBreak.id), finishedBreak];
           const totalBreakMins = updatedBreaks.reduce((acc, b) => acc + b.durationMinutes, 0);
+
+          const updatedRec = {
+            ...s.todayRecord,
+            status: (s.todayRecord.lateMinutes > 0 ? 'Late' : 'Present') as AttendanceStatus,
+            breaks: updatedBreaks,
+            breakMinutes: totalBreakMins,
+          };
+
+          const userId = useFinanceStore.getState().profile.id;
+          saveAttendanceToSupabase(userId, updatedRec);
 
           return {
             activeBreak: null,
-            todayRecord: {
-              ...s.todayRecord,
-              status: s.todayRecord.lateMinutes > 0 ? 'Late' : 'Present',
-              breaks: updatedBreaks,
-              breakMinutes: totalBreakMins,
-            },
+            todayRecord: updatedRec,
           };
         }),
 
@@ -294,14 +322,42 @@ export const useAttendanceStore = create<AttendanceState>()(
             breaks: allBreaks,
           };
 
+          const userId = useFinanceStore.getState().profile.id;
+          saveAttendanceToSupabase(userId, finalRecord);
+
           return {
             todayRecord: null,
             activeBreak: null,
-            attendanceHistory: [...s.attendanceHistory, finalRecord],
+            attendanceHistory: [...s.attendanceHistory.filter(r => r.id !== finalRecord.id), finalRecord],
           };
         }),
 
-      // ── Apply Leave ──
+      loadAttendanceFromSupabase: async () => {
+        const userId = useFinanceStore.getState().profile.id;
+        const res = await fetchAttendanceFromSupabase(userId);
+        if (res.success && res.data && res.data.length > 0) {
+          const today = todayStr();
+          const todayRec = res.data.find((r) => r.attendanceDate === today && !r.checkOut) || null;
+          const activeBr = todayRec?.breaks?.find((b: BreakRecord) => !b.breakEnd) || null;
+          set({
+            attendanceHistory: res.data.filter((r) => r.checkOut),
+            todayRecord: todayRec || get().todayRecord,
+            activeBreak: activeBr || get().activeBreak,
+          });
+        } else {
+          const currentRecord = get().todayRecord;
+          if (currentRecord) {
+            saveAttendanceToSupabase(userId, currentRecord);
+          }
+        }
+
+        // Fetch leave requests from Supabase
+        const leaveRes = await fetchLeavesFromSupabase(userId);
+        if (leaveRes.success && leaveRes.data && leaveRes.data.length > 0) {
+          set({ leaveRequests: leaveRes.data });
+        }
+      },
+
       applyLeave: (leave) =>
         set((s) => {
           const request: LeaveRequest = {
@@ -318,6 +374,9 @@ export const useAttendanceStore = create<AttendanceState>()(
           if (typeKey in balances) {
             balances[typeKey] = Math.max(0, balances[typeKey] - leave.totalDays);
           }
+
+          const userId = useFinanceStore.getState().profile.id;
+          saveLeaveToSupabase(userId, request);
 
           return {
             leaveRequests: [...s.leaveRequests, request],
@@ -337,6 +396,8 @@ export const useAttendanceStore = create<AttendanceState>()(
           if (typeKey in balances) {
             balances[typeKey] += leave.totalDays;
           }
+
+          deleteLeaveFromSupabase(leaveId);
 
           return {
             leaveRequests: s.leaveRequests.filter((l) => l.id !== leaveId),

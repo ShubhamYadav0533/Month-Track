@@ -8,6 +8,7 @@ import {
   StyleSheet,
   SafeAreaView,
   Modal,
+  Alert,
 } from 'react-native';
 import { Plus, Clock, X } from 'lucide-react-native';
 import { useAttendanceStore } from '../store/useAttendanceStore';
@@ -24,16 +25,20 @@ export function LeaveManagementScreen() {
   const [reason, setReason] = useState('');
 
   const handleApply = () => {
-    if (!reason.trim()) return;
+    const finalReason = reason.trim() || `${leaveType} Leave Application`;
+    const numDays = parseFloat(totalDays) || 1;
+
     applyLeave({
       leaveType,
-      startDate,
-      endDate,
-      totalDays: parseFloat(totalDays) || 1,
-      reason,
+      startDate: startDate.trim() || new Date().toISOString().slice(0, 10),
+      endDate: endDate.trim() || new Date().toISOString().slice(0, 10),
+      totalDays: numDays,
+      reason: finalReason,
     });
+
     setModalVisible(false);
     setReason('');
+    Alert.alert('Leave Submitted', `${leaveType} leave application (${numDays} day${numDays > 1 ? 's' : ''}) has been submitted successfully.`);
   };
 
   const getStatusColor = (status: string) => {

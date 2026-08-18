@@ -17,11 +17,13 @@ import {
   X,
 } from 'lucide-react-native';
 import { useProductivityStore } from '../store/useProductivityStore';
+import { scheduleLocalNotification } from '../services/notificationService';
 
 export function NotificationsScreen() {
   const {
     notifications,
     config,
+    addNotificationRecord,
     markNotificationRead,
     dismissNotification,
     clearAllNotifications,
@@ -30,6 +32,17 @@ export function NotificationsScreen() {
 
   const [activeTab, setActiveTab] = useState<'Inbox' | 'Settings'>('Inbox');
   const [filter, setFilter] = useState<'All' | 'Unread'>('All');
+
+  const handleSendTestNotification = async () => {
+    const title = 'Test Notification 🔔';
+    const body = 'Your Personal OS notification system is working perfectly!';
+    addNotificationRecord({
+      title,
+      body,
+      status: 'unread',
+    });
+    await scheduleLocalNotification(title, body, new Date(Date.now() + 1000));
+  };
 
   const filteredNotifs = notifications.filter((n) => {
     if (n.status === 'dismissed') return false;
@@ -88,11 +101,17 @@ export function NotificationsScreen() {
               </TouchableOpacity>
             </View>
 
-            {notifications.length > 0 && (
-              <TouchableOpacity onPress={clearAllNotifications}>
-                <Text style={styles.clearText}>Clear All</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <TouchableOpacity style={styles.testBtn} onPress={handleSendTestNotification}>
+                <Bell size={13} color="#10b981" />
+                <Text style={styles.testBtnText}>Test Alert</Text>
               </TouchableOpacity>
-            )}
+              {notifications.length > 0 && (
+                <TouchableOpacity onPress={clearAllNotifications}>
+                  <Text style={styles.clearText}>Clear All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           {/* List */}
@@ -214,6 +233,22 @@ const styles = StyleSheet.create({
   filterText: { color: '#94a3b8', fontSize: 12, fontWeight: '600' },
   filterTextActive: { color: '#fff', fontWeight: '800' },
   clearText: { color: '#ef4444', fontSize: 12, fontWeight: '700' },
+  testBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#10b98120',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#10b98140',
+  },
+  testBtnText: {
+    color: '#10b981',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 
   listContent: { padding: 20, gap: 12, paddingBottom: 40 },
   emptyCard: { backgroundColor: '#1e293b', padding: 40, borderRadius: 16, alignItems: 'center', gap: 10 },

@@ -254,9 +254,9 @@ export function LiveDashboard() {
                     <View style={[styles.iconCircle, { backgroundColor: isInc ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)' }]}>
                       {isInc ? <ArrowDownLeft size={16} color="#10b981" /> : <ArrowUpRight size={16} color="#ef4444" />}
                     </View>
-                    <View>
-                      <Text style={styles.txTitle}>{tx.title}</Text>
-                      <Text style={styles.txMeta}>{tx.transactionDate} • {tx.category}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.txTitle} numberOfLines={1} ellipsizeMode="tail">{tx.title}</Text>
+                      <Text style={styles.txMeta} numberOfLines={1} ellipsizeMode="tail">{tx.transactionDate} • {tx.category}</Text>
                     </View>
                   </View>
                   <Text style={[styles.txAmount, { color: isInc ? '#10b981' : '#f8fafc' }]}>
@@ -475,9 +475,11 @@ const styles = StyleSheet.create({
     borderBottomColor: '#0f172a',
   },
   recentLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    marginRight: 8,
   },
   iconCircle: {
     width: 32,
@@ -485,6 +487,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   txTitle: {
     fontSize: 14,
@@ -498,5 +501,7 @@ const styles = StyleSheet.create({
   txAmount: {
     fontSize: 14,
     fontWeight: '800',
+    flexShrink: 0,
+    marginLeft: 4,
   },
 });

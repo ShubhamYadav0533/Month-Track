@@ -6,9 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   StyleSheet,
-  SafeAreaView,
   Switch,
+  Alert,
 } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { exportExpensesToCSV, generateBackupJSON } from '../utils/exportUtils';
 import { Download, Shield, Trash2, FileSpreadsheet, Lock, User, Save } from 'lucide-react-native';
@@ -21,21 +22,75 @@ export function SettingsExportScreen() {
   const [salaryDate, setSalaryDate] = useState(profile.salaryDate.toString());
   const [currency, setCurrency] = useState(profile.currency);
   const [pinInput, setPinInput] = useState(profile.pinCode || '');
-  const [darkMode, setDarkMode] = useState(true);
+  const [darkMode, setDarkMode] = useState(profile.isDarkMode ?? true);
   const [bioEnabled, setBioEnabled] = useState(profile.isBiometricsEnabled || false);
+
+  const handleToggleDarkMode = (val: boolean) => {
+    setDarkMode(val);
+    updateProfile({ isDarkMode: val });
+  };
+
+  const handleToggleBiometrics = async (val: boolean) => {
+    if (val) {
+      try {
+        const hasHardware = await LocalAuthentication.hasHardwareAsync();
+        const isEnrolled = await LocalAuthentication.isEnrolledAsync();
+
+        if (hasHardware && isEnrolled) {
+          const res = await LocalAuthentication.authenticateAsync({
+            promptMessage: 'Confirm Fingerprint / Biometrics to enable unlock',
+          });
+
+          if (res.success) {
+            setBioEnabled(true);
+            updateProfile({ isBiometricsEnabled: true });
+          } else {
+            Alert.alert('Authentication Failed', 'Fingerprint verification failed.');
+          }
+        } else {
+          setBioEnabled(true);
+          updateProfile({ isBiometricsEnabled: true });
+        }
+      } catch {
+        setBioEnabled(true);
+        updateProfile({ isBiometricsEnabled: true });
+      }
+    } else {
+      setBioEnabled(false);
+      updateProfile({ isBiometricsEnabled: false });
+    }
+  };
 
   const handleSaveProfile = () => {
     const inc = parseFloat(monthlyIncome);
     const salDay = parseInt(salaryDate, 10);
+
+    if (pinInput && pinInput.length > 0 && pinInput.length !== 4) {
+      Alert.alert('Invalid Passcode', 'Security Passcode PIN must be exactly 4 digits.');
+      return;
+    }
 
     updateProfile({
       name,
       monthlyIncome: isNaN(inc) ? profile.monthlyIncome : inc,
       salaryDate: isNaN(salDay) ? profile.salaryDate : salDay,
       currency,
-      pinCode: pinInput || undefined,
+      pinCode: pinInput.trim() ? pinInput.trim() : undefined,
       isBiometricsEnabled: bioEnabled,
+      isDarkMode: darkMode,
     });
+
+    const lockStatusMsg = pinInput.trim()
+      ? 'Security PIN updated successfully! Your app is now protected.'
+      : 'Profile settings updated successfully.';
+
+    Alert.alert('Settings Saved', lockStatusMsg);
+  };
+
+  const handleClearPin = () => {
+    setPinInput('');
+    updateProfile({ pinCode: undefined });
+    Alert.alert('PIN Removed', 'Passcode protection has been disabled.');
   };
 
   const handleExportCSV = async () => {
@@ -47,7 +102,7 @@ export function SettingsExportScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>Profile & Settings</Text>
@@ -160,12 +215,12 @@ export function SettingsExportScreen() {
 
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>Dark Mode (Default)</Text>
-            <Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ false: '#334155', true: '#10b981' }} />
+            <Switch value={darkMode} onValueChange={handleToggleDarkMode} trackColor={{ false: '#334155', true: '#10b981' }} />
           </View>
 
           <View style={styles.switchRow}>
             <Text style={styles.switchLabel}>Biometric / Fingerprint Unlock</Text>
-            <Switch value={bioEnabled} onValueChange={setBioEnabled} trackColor={{ false: '#334155', true: '#10b981' }} />
+            <Switch value={bioEnabled} onValueChange={handleToggleBiometrics} trackColor={{ false: '#334155', true: '#10b981' }} />
           </View>
 
           <Text style={styles.label}>Security Passcode PIN (4 digits)</Text>
@@ -180,12 +235,27 @@ export function SettingsExportScreen() {
             placeholderTextColor="#64748b"
           />
 
-          {profile.pinCode && (
-            <TouchableOpacity style={styles.lockBtn} onPress={lockApp}>
-              <Lock size={16} color="#3b82f6" />
-              <Text style={styles.lockBtnText}>Lock App Now</Text>
-            </TouchableOpacity>
-          )}
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+            {(profile.pinCode || profile.isBiometricsEnabled) && (
+              <TouchableOpacity style={[styles.lockBtn, { flex: 1, marginTop: 0 }]} onPress={lockApp}>
+                <Lock size={16} color="#3b82f6" />
+                <Text style={styles.lockBtnText}>Lock App Now</Text>
+              </TouchableOpacity>
+            )}
+
+            {profile.pinCode && (
+              <TouchableOpacity
+                style={[
+                  styles.lockBtn,
+                  { flex: 1, marginTop: 0, backgroundColor: 'rgba(239, 68, 68, 0.15)' },
+                ]}
+                onPress={handleClearPin}
+              >
+                <Trash2 size={16} color="#ef4444" />
+                <Text style={[styles.lockBtnText, { color: '#ef4444' }]}>Remove PIN</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Export & Data Backup */}
@@ -212,7 +282,7 @@ export function SettingsExportScreen() {
           <Text style={styles.resetBtnText}>Reset All Data to Default</Text>
         </TouchableOpacity>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
