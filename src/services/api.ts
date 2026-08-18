@@ -44,6 +44,7 @@ export async function syncExpenseToBackend(expense: {
   location?: string;
   receiptUrl?: string;
   expenseDate: string;
+  transactionDate?: string;
 }) {
   try {
     const res = await fetch(`${API_BASE_URL}/expenses`, {

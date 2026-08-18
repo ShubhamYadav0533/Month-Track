@@ -93,7 +93,7 @@ export function TransactionsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={{ flexGrow: 0, marginVertical: 10 }}
+        style={styles.filterTabsScrollView}
         contentContainerStyle={styles.filterTabsRow}
       >
         {(['Today', 'Yesterday', 'This Week', 'This Month', 'All'] as DateFilter[]).map((tab) => (
@@ -157,8 +157,8 @@ export function TransactionsScreen() {
                     )}
                   </View>
                   <View style={styles.txInfo}>
-                    <Text style={styles.txTitle}>{tx.title}</Text>
-                    <Text style={styles.txMeta}>
+                    <Text style={styles.txTitle} numberOfLines={1} ellipsizeMode="tail">{tx.title}</Text>
+                    <Text style={styles.txMeta} numberOfLines={1} ellipsizeMode="tail">
                       {tx.transactionDate} • {tx.category} • {tx.paymentMethod}
                     </Text>
                   </View>
@@ -299,24 +299,33 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 13,
   },
+  filterTabsScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
+    height: 44,
+    marginVertical: 6,
+  },
   filterTabsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 18,
     gap: 8,
+    height: 44,
   },
   filterTab: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 7,
     borderRadius: 20,
     backgroundColor: '#1e293b',
     borderWidth: 1,
     borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
+    height: 34,
   },
   filterTabActive: {
     backgroundColor: '#10b981',
+    borderColor: '#10b981',
   },
   filterTabText: {
     fontSize: 12,
@@ -325,6 +334,7 @@ const styles = StyleSheet.create({
   },
   filterTabTextActive: {
     color: '#ffffff',
+    fontWeight: '700',
   },
   searchContainer: {
     paddingHorizontal: 18,
@@ -370,30 +380,37 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
   txLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    marginRight: 8,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
-  txInfo: {},
+  txInfo: {
+    flex: 1,
+  },
   txTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     color: '#f8fafc',
   },
   txMeta: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#94a3b8',
     marginTop: 2,
   },
   txRight: {
     alignItems: 'flex-end',
+    flexShrink: 0,
+    marginLeft: 4,
   },
   txAmount: {
     fontSize: 15,

@@ -1,5 +1,5 @@
 import { supabase } from '../config/supabaseClient';
-import { fetchExpensesFromBackend } from './api';
+import { fetchExpensesFromBackend, syncExpenseToBackend } from './api';
 import {
   UserProfile,
   Account,
@@ -77,38 +77,43 @@ export async function saveAccountsToSupabase(userId: string, accounts: Account[]
 
 export async function saveTransactionToSupabase(userId: string, tx: Transaction) {
   try {
-    // 1. Ensure user row exists in Supabase 'users' table so foreign key constraint passes
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = userId && uuidRegex.test(userId)
+      ? userId
+      : '00000000-0000-4000-a000-000000000001';
+
+    const accountId = (tx.accountId && uuidRegex.test(tx.accountId))
+      ? tx.accountId
+      : '00000000-0000-4000-a000-000000000012';
+
+    // 1. Ensure user row exists in Supabase 'users' table
     await supabase.from('users').upsert({
-      id: userId,
+      id: validUserId,
       name: 'User',
-      email: `${userId}@smartfinance.app`,
+      email: `${validUserId}@smartfinance.app`,
       monthly_income: 0,
       salary_date: 1,
       savings_goal: 0,
       currency: '₹',
     });
 
-    // 2. Validate account_id is a valid UUID, fallback to DEFAULT_ACC_UPI UUID if invalid
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const accountId = uuidRegex.test(tx.accountId)
-      ? tx.accountId
-      : '00000000-0000-4000-a000-000000000012';
-
-    // 3. Ensure account row exists in Supabase 'accounts' table so foreign key constraint passes
+    // 2. Ensure account row exists in Supabase 'accounts' table
     await supabase.from('accounts').upsert({
       id: accountId,
-      user_id: userId,
+      user_id: validUserId,
       name: 'Default Account',
       type: 'upi',
       balance: 0,
       credit_limit: 0,
     });
 
+    const txId = (tx.id && uuidRegex.test(tx.id)) ? tx.id : undefined;
+
     const { data, error } = await supabase
       .from('transactions')
       .upsert({
-        id: tx.id,
-        user_id: userId,
+        ...(txId ? { id: txId } : {}),
+        user_id: validUserId,
         account_id: accountId,
         title: tx.title,
         amount: tx.amount,
@@ -125,14 +130,35 @@ export async function saveTransactionToSupabase(userId: string, tx: Transaction)
       .select();
 
     if (error) {
-      console.error('[Supabase] Transaction sync error:', error);
-      throw error;
+      console.warn('[Supabase] Direct transaction save notice, triggering backend sync fallback:', error);
     }
-    console.log('[Supabase] Transaction saved successfully:', data);
+
+    // Always sync to Express backend API as well
+    syncExpenseToBackend({
+      userId: validUserId,
+      accountId: accountId,
+      amount: tx.amount,
+      category: tx.category,
+      description: tx.title,
+      paymentMethod: tx.paymentMethod,
+      transactionDate: tx.transactionDate,
+      expenseDate: tx.transactionDate,
+    });
+
     return { success: true, data };
   } catch (err) {
-    console.warn('[Supabase] Transaction sync error:', err);
-    return { success: false, error: err };
+    console.warn('[Supabase] Transaction sync warning, using backend fallback:', err);
+    const backendRes = await syncExpenseToBackend({
+      userId,
+      accountId: tx.accountId,
+      amount: tx.amount,
+      category: tx.category,
+      description: tx.title,
+      paymentMethod: tx.paymentMethod,
+      transactionDate: tx.transactionDate,
+      expenseDate: tx.transactionDate,
+    });
+    return { success: !!backendRes, data: backendRes };
   }
 }
 

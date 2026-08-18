@@ -25,15 +25,52 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
     const numAmount = parseFloat(amount);
     const dateStr = transactionDate || expenseDate || new Date().toISOString().split('T')[0];
 
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    // Find or fallback to a valid user_id
+    let validUserId = userId && uuidRegex.test(userId) ? userId : null;
+    if (!validUserId) {
+      const { data: latestUser } = await supabase.from('users').select('id').order('created_at', { ascending: false }).limit(1).maybeSingle();
+      validUserId = latestUser?.id || '00000000-0000-4000-a000-000000000001';
+    }
+
+    // Ensure user exists
+    await supabase.from('users').upsert({
+      id: validUserId,
+      name: 'User',
+      email: `${validUserId}@smartfinance.app`,
+      monthly_income: 0,
+      salary_date: 1,
+      savings_goal: 0,
+      currency: '₹',
+    });
+
+    // Find or fallback to a valid account_id
+    let validAccountId = accountId && uuidRegex.test(accountId) ? accountId : null;
+    if (!validAccountId) {
+      const { data: latestAcc } = await supabase.from('accounts').select('id').eq('user_id', validUserId).limit(1).maybeSingle();
+      validAccountId = latestAcc?.id || '00000000-0000-4000-a000-000000000012';
+    }
+
+    // Ensure account exists
+    await supabase.from('accounts').upsert({
+      id: validAccountId,
+      user_id: validUserId,
+      name: 'Default Account',
+      type: 'upi',
+      balance: 0,
+      credit_limit: 0,
+    });
+
     const { data: expense, error } = await supabase
       .from('transactions')
       .upsert({
-        user_id: userId,
-        account_id: accountId,
+        user_id: validUserId,
+        account_id: validAccountId,
         amount: numAmount,
         title: title || description || category,
         type: 'Expense',
-        category,
+        category: category || 'Others',
         payment_method: paymentMethod || 'UPI',
         location,
         attachment: receiptUrl,
@@ -45,18 +82,19 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
     if (error) throw error;
 
     // Deduct amount from Account balance in Supabase
-    if (accountId) {
-      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', accountId).maybeSingle();
+    if (validAccountId) {
+      const { data: acc } = await supabase.from('accounts').select('balance').eq('id', validAccountId).maybeSingle();
       if (acc) {
         await supabase
           .from('accounts')
           .update({ balance: Math.max(0, acc.balance - numAmount) })
-          .eq('id', accountId);
+          .eq('id', validAccountId);
       }
     }
 
     res.json({ success: true, expense });
   } catch (error: any) {
+    console.error('Create expense error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
