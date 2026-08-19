@@ -14,7 +14,6 @@ import React, { useState, useEffect } from 'react';
 import {
   Image,
   Modal,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -30,7 +29,7 @@ import { AddTransactionModal } from './AddTransactionModal';
 type DateFilter = 'Today' | 'Yesterday' | 'This Week' | 'This Month' | 'All';
 
 export function TransactionsScreen() {
-  const { profile, transactions, deleteTransaction, deleteMultipleTransactions, duplicateTransaction, loadSupabaseData, isLoading } = useFinanceStore();
+  const { profile, transactions, deleteTransaction, deleteMultipleTransactions, duplicateTransaction, loadSupabaseData } = useFinanceStore();
 
   const [dateFilter, setDateFilter] = useState<DateFilter>('All');
   const [searchQuery, setSearchQuery] = useState('');
