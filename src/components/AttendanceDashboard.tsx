@@ -23,7 +23,6 @@ import {
   FileText,
   Award,
   Plus,
-  Palmtree,
   X,
 } from 'lucide-react-native';
 import { useAttendanceStore, formatMinutesToHM } from '../store/useAttendanceStore';
