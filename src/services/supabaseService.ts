@@ -583,37 +583,48 @@ export async function deletePlannerSlotFromSupabase(slotId: string) {
 
 export async function fetchFullUserDataFromSupabase(userId: string) {
   try {
-    // 1. Fetch profile for userId, or fallback to the latest user in Supabase
-    let userRes = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
-    if (!userRes.data) {
-      const latestUserRes = await supabase.from('users').select('*').order('created_at', { ascending: false }).limit(1).maybeSingle();
-      if (latestUserRes.data) {
-        userRes = latestUserRes;
+    // 1. Fetch profile for userId, or fallback to any user row in Supabase
+    let userProfileData: any = null;
+    try {
+      const userRes = await supabase.from('users').select('*').eq('id', userId).maybeSingle();
+      if (userRes.data) {
+        userProfileData = userRes.data;
+      } else {
+        const fallbackUserRes = await supabase.from('users').select('*').limit(1).maybeSingle();
+        if (fallbackUserRes.data) {
+          userProfileData = fallbackUserRes.data;
+        }
       }
+    } catch (e) {
+      console.warn('[Supabase] Profile fetch error:', e);
     }
 
-    const targetUserId = userRes.data?.id || userId;
+    const targetUserId = userProfileData?.id || userId;
 
-    // 2. Fetch accounts for targetUserId or all accounts
-    let accountsRes = await supabase.from('accounts').select('*').eq('user_id', targetUserId);
-    if (!accountsRes.data || accountsRes.data.length === 0) {
-      accountsRes = await supabase.from('accounts').select('*');
+    // 2. Fetch accounts
+    let accountsData: any[] = [];
+    try {
+      let accountsRes = await supabase.from('accounts').select('*').eq('user_id', targetUserId);
+      if (!accountsRes.data || accountsRes.data.length === 0) {
+        accountsRes = await supabase.from('accounts').select('*');
+      }
+      accountsData = accountsRes.data || [];
+    } catch (e) {
+      console.warn('[Supabase] Accounts fetch error:', e);
     }
 
-    // 3. Fetch transactions for targetUserId or all transactions
-    let txRes = await supabase
-      .from('transactions')
-      .select('*')
-      .eq('user_id', targetUserId)
-      .order('transaction_date', { ascending: false });
-    if (!txRes.data || txRes.data.length === 0) {
-      txRes = await supabase
-        .from('transactions')
-        .select('*')
-        .order('transaction_date', { ascending: false });
+    // 3. Fetch transactions
+    let txList: any[] = [];
+    try {
+      let txRes = await supabase.from('transactions').select('*').eq('user_id', targetUserId);
+      if (!txRes.data || txRes.data.length === 0) {
+        txRes = await supabase.from('transactions').select('*');
+      }
+      txList = txRes.data || [];
+    } catch (e) {
+      console.warn('[Supabase] Transactions fetch error:', e);
     }
 
-    let txList: any[] = txRes.data || [];
     if (txList.length === 0) {
       try {
         const backendTxs = await fetchExpensesFromBackend();
@@ -621,34 +632,58 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
           txList = backendTxs;
         }
       } catch (err) {
-        console.warn('Fallback backend expenses fetch failed:', err);
+        console.warn('[Backend] Fallback expenses fetch failed:', err);
       }
     }
 
-    // 4. Fetch budgets, goals, tasks, bills with fallback to all rows
-    let budgetsRes = await supabase.from('budgets').select('*').eq('user_id', targetUserId);
-    if (!budgetsRes.data || budgetsRes.data.length === 0) {
-      budgetsRes = await supabase.from('budgets').select('*');
+    // 4. Fetch budgets, goals, tasks, bills
+    let budgetsData: any[] = [];
+    try {
+      let budgetsRes = await supabase.from('budgets').select('*').eq('user_id', targetUserId);
+      if (!budgetsRes.data || budgetsRes.data.length === 0) {
+        budgetsRes = await supabase.from('budgets').select('*');
+      }
+      budgetsData = budgetsRes.data || [];
+    } catch (e) {
+      console.warn('[Supabase] Budgets fetch error:', e);
     }
 
-    let goalsRes = await supabase.from('savings_goals').select('*').eq('user_id', targetUserId);
-    if (!goalsRes.data || goalsRes.data.length === 0) {
-      goalsRes = await supabase.from('savings_goals').select('*');
+    let goalsData: any[] = [];
+    try {
+      let goalsRes = await supabase.from('savings_goals').select('*').eq('user_id', targetUserId);
+      if (!goalsRes.data || goalsRes.data.length === 0) {
+        goalsRes = await supabase.from('savings_goals').select('*');
+      }
+      goalsData = goalsRes.data || [];
+    } catch (e) {
+      console.warn('[Supabase] Goals fetch error:', e);
     }
 
-    let tasksRes = await supabase.from('tasks').select('*').eq('user_id', targetUserId);
-    if (!tasksRes.data || tasksRes.data.length === 0) {
-      tasksRes = await supabase.from('tasks').select('*');
+    let tasksData: any[] = [];
+    try {
+      let tasksRes = await supabase.from('tasks').select('*').eq('user_id', targetUserId);
+      if (!tasksRes.data || tasksRes.data.length === 0) {
+        tasksRes = await supabase.from('tasks').select('*');
+      }
+      tasksData = tasksRes.data || [];
+    } catch (e) {
+      console.warn('[Supabase] Tasks fetch error:', e);
     }
 
-    let billsRes = await supabase.from('bills').select('*').eq('user_id', targetUserId);
-    if (!billsRes.data || billsRes.data.length === 0) {
-      billsRes = await supabase.from('bills').select('*');
+    let billsData: any[] = [];
+    try {
+      let billsRes = await supabase.from('bills').select('*').eq('user_id', targetUserId);
+      if (!billsRes.data || billsRes.data.length === 0) {
+        billsRes = await supabase.from('bills').select('*');
+      }
+      billsData = billsRes.data || [];
+    } catch (e) {
+      console.warn('[Supabase] Bills fetch error:', e);
     }
 
-    let userProfile = userRes.data;
-    if (!userProfile) {
-      userProfile = {
+    let finalProfile = userProfileData;
+    if (!finalProfile) {
+      finalProfile = {
         id: userId,
         name: 'User',
         monthly_income: 0,
@@ -660,8 +695,8 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
 
     return {
       success: true,
-      profile: userProfile,
-      accounts: accountsRes.data || [],
+      profile: finalProfile,
+      accounts: accountsData,
       transactions: txList.map((t: Record<string, unknown>): Transaction => ({
         id: String(t.id || ''),
         title: String(t.title || ''),
@@ -679,19 +714,19 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
         location: t.location ? String(t.location) : undefined,
         createdAt: String(t.created_at || ''),
       })),
-      budgets: (budgetsRes.data || []).map((b: Record<string, unknown>): CategoryBudget => ({
+      budgets: budgetsData.map((b: Record<string, unknown>): CategoryBudget => ({
         category: b.category as ExpenseCategory,
-        monthlyLimit: parseFloat(String(b.monthly_limit)),
+        monthlyLimit: parseFloat(String(b.monthly_limit || 0)),
       })),
-      goals: (goalsRes.data || []).map((g: Record<string, unknown>): SavingsGoal => ({
-        id: String(g.id),
-        title: String(g.title),
-        targetAmount: parseFloat(String(g.target_amount)),
-        savedAmount: parseFloat(String(g.saved_amount)),
+      goals: goalsData.map((g: Record<string, unknown>): SavingsGoal => ({
+        id: String(g.id || ''),
+        title: String(g.title || ''),
+        targetAmount: parseFloat(String(g.target_amount || 0)),
+        savedAmount: parseFloat(String(g.saved_amount || 0)),
         targetDate: g.target_date ? String(g.target_date) : undefined,
         icon: String(g.icon || 'target'),
       })),
-      tasks: (tasksRes.data || []).map((t: Record<string, unknown>): TaskItem => ({
+      tasks: tasksData.map((t: Record<string, unknown>): TaskItem => ({
         id: String(t.id || ''),
         title: String(t.title || ''),
         description: t.description ? String(t.description) : undefined,
@@ -702,7 +737,7 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
         reminderDate: t.reminder_date ? String(t.reminder_date) : undefined,
         createdAt: String(t.created_at || ''),
       })),
-      bills: (billsRes.data || []).map((b: Record<string, unknown>): BillItem => ({
+      bills: billsData.map((b: Record<string, unknown>): BillItem => ({
         id: String(b.id || ''),
         title: String(b.title || ''),
         amount: parseFloat(String(b.amount || 0)),
@@ -714,7 +749,7 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
       })),
     };
   } catch (err) {
-    console.warn('[Supabase] Full fetch error:', err);
+    console.warn('[Supabase] Full fetch unexpected error:', err);
     return {
       success: false,
       profile: null,
