@@ -107,6 +107,7 @@ export function EnhancedTasksScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScrollWrapper}
         contentContainerStyle={styles.filterScroll}
       >
         {(['Today', 'Upcoming', 'Important', 'Completed', 'All'] as const).map((sec) => (
@@ -114,6 +115,7 @@ export function EnhancedTasksScreen() {
             key={sec}
             style={[styles.chip, filterSection === sec && styles.chipActive]}
             onPress={() => setFilterSection(sec)}
+            activeOpacity={0.7}
           >
             <Text style={[styles.chipText, filterSection === sec && styles.chipTextActive]}>
               {sec}
@@ -295,9 +297,10 @@ const styles = StyleSheet.create({
   addBtn: { backgroundColor: '#10b981', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12 },
   addBtnText: { color: '#fff', fontWeight: '800', fontSize: 13 },
 
-  filterScroll: { paddingHorizontal: 20, gap: 8, paddingBottom: 10 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: '#1e293b', borderWidth: 1, borderColor: '#334155' },
-  chipActive: { backgroundColor: '#10b981' },
+  filterScrollWrapper: { flexGrow: 0, marginBottom: 8 },
+  filterScroll: { paddingHorizontal: 20, gap: 8, alignItems: 'center' },
+  chip: { paddingHorizontal: 16, height: 36, justifyContent: 'center', alignItems: 'center', borderRadius: 18, backgroundColor: '#1e293b', borderWidth: 1, borderColor: '#334155' },
+  chipActive: { backgroundColor: '#10b981', borderColor: '#10b981' },
   chipText: { fontSize: 12, color: '#94a3b8', fontWeight: '600' },
   chipTextActive: { color: '#fff', fontWeight: '800' },
 
