@@ -398,6 +398,51 @@ export type Database = {
           },
         ]
       }
+      expense_splits: {
+        Row: {
+          amount: number
+          created_at: string | null
+          expense_id: string
+          id: string
+          percentage: number | null
+          person_id: string
+          shares: number | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          expense_id: string
+          id?: string
+          percentage?: number | null
+          person_id: string
+          shares?: number | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          expense_id?: string
+          id?: string
+          percentage?: number | null
+          person_id?: string
+          shares?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_splits_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "shared_expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_splits_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       expenses: {
         Row: {
           account_id: string | null
@@ -489,6 +534,86 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string | null
+          person_id: string
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string | null
+          person_id: string
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string | null
+          person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_members_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          currency: string | null
+          description: string | null
+          id: string
+          name: string
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "groups_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -658,6 +783,145 @@ export type Database = {
           },
         ]
       }
+      ledger_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          currency: string | null
+          date: string
+          description: string
+          group_id: string | null
+          id: string
+          month: string
+          person_id: string | null
+          related_transaction_id: string | null
+          status: string | null
+          type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          date?: string
+          description: string
+          group_id?: string | null
+          id?: string
+          month: string
+          person_id?: string | null
+          related_transaction_id?: string | null
+          status?: string | null
+          type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          currency?: string | null
+          date?: string
+          description?: string
+          group_id?: string | null
+          id?: string
+          month?: string
+          person_id?: string | null
+          related_transaction_id?: string | null
+          status?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_transactions_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_transactions_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          created_at: string | null
+          date: string
+          description: string
+          due_date: string | null
+          id: string
+          original_amount: number
+          payment_method: string | null
+          person_id: string
+          remaining_amount: number
+          repaid_amount: number
+          status: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          date?: string
+          description: string
+          due_date?: string | null
+          id?: string
+          original_amount: number
+          payment_method?: string | null
+          person_id: string
+          remaining_amount: number
+          repaid_amount?: number
+          status?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          original_amount?: number
+          payment_method?: string | null
+          person_id?: string
+          remaining_amount?: number
+          repaid_amount?: number
+          status?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -719,6 +983,53 @@ export type Database = {
           office_name?: string
         }
         Relationships: []
+      }
+      people: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone_number: string | null
+          status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone_number?: string | null
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "people_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       recurring_transactions: {
         Row: {
@@ -824,6 +1135,74 @@ export type Database = {
           },
         ]
       }
+      repayments: {
+        Row: {
+          amount: number
+          created_at: string | null
+          date: string
+          from_person_id: string
+          id: string
+          loan_id: string | null
+          notes: string | null
+          person_id: string
+          status: string | null
+          to_person_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          date?: string
+          from_person_id: string
+          id?: string
+          loan_id?: string | null
+          notes?: string | null
+          person_id: string
+          status?: string | null
+          to_person_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          from_person_id?: string
+          id?: string
+          loan_id?: string | null
+          notes?: string | null
+          person_id?: string
+          status?: string | null
+          to_person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "repayments_from_person_id_fkey"
+            columns: ["from_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repayments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repayments_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "repayments_to_person_id_fkey"
+            columns: ["to_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       savings_goals: {
         Row: {
           created_at: string | null
@@ -858,6 +1237,134 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "savings_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      settlements: {
+        Row: {
+          amount: number
+          created_at: string | null
+          date: string
+          from_person_id: string
+          group_id: string | null
+          id: string
+          month: string
+          notes: string | null
+          status: string | null
+          to_person_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          date?: string
+          from_person_id: string
+          group_id?: string | null
+          id?: string
+          month: string
+          notes?: string | null
+          status?: string | null
+          to_person_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          date?: string
+          from_person_id?: string
+          group_id?: string | null
+          id?: string
+          month?: string
+          notes?: string | null
+          status?: string | null
+          to_person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "settlements_from_person_id_fkey"
+            columns: ["from_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "settlements_to_person_id_fkey"
+            columns: ["to_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      shared_expenses: {
+        Row: {
+          category: string
+          created_at: string | null
+          date: string
+          description: string
+          group_id: string
+          id: string
+          month: string
+          paid_by_person_id: string
+          split_type: string | null
+          status: string | null
+          total_amount: number
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          date?: string
+          description: string
+          group_id: string
+          id?: string
+          month: string
+          paid_by_person_id: string
+          split_type?: string | null
+          status?: string | null
+          total_amount: number
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          date?: string
+          description?: string
+          group_id?: string
+          id?: string
+          month?: string
+          paid_by_person_id?: string
+          split_type?: string | null
+          status?: string | null
+          total_amount?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_expenses_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_expenses_paid_by_person_id_fkey"
+            columns: ["paid_by_person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_expenses_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"

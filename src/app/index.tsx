@@ -7,7 +7,6 @@ import {
   StatusBar,
   ScrollView,
   Modal,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFinanceStore } from '../store/useFinanceStore';
@@ -36,15 +35,17 @@ import {
   Menu,
   X,
   ChevronRight,
-  Shield,
   Sparkles,
   Lock,
 } from 'lucide-react-native';
+
+import { SharedLedgerScreen } from '../components/sharedLedger/SharedLedgerScreen';
 
 type UnifiedTab =
   | 'dashboard'
   | 'tasks'
   | 'expenses'
+  | 'sharedLedger'
   | 'attendance'
   | 'leaves'
   | 'calendar'
@@ -83,6 +84,13 @@ export default function MainApp() {
       label: 'Expenses',
       description: 'Money & budget tracking',
       icon: <DollarSign size={22} color="#3b82f6" />,
+      mode: 'finance',
+    },
+    {
+      id: 'sharedLedger',
+      label: 'Shared & Lending',
+      description: 'Group bills, lending & settlements',
+      icon: <User size={22} color="#10b981" />,
       mode: 'finance',
     },
     {
@@ -215,6 +223,7 @@ export default function MainApp() {
         {currentTab === 'dashboard' && <UnifiedDashboard />}
         {currentTab === 'tasks' && <EnhancedTasksScreen />}
         {currentTab === 'expenses' && <TransactionsScreen />}
+        {currentTab === 'sharedLedger' && <SharedLedgerScreen />}
         {currentTab === 'attendance' && <AttendanceDashboard />}
         {currentTab === 'leaves' && <LeaveManagementScreen />}
         {currentTab === 'calendar' && <CalendarScreen />}
