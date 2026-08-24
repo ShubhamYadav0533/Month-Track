@@ -4,11 +4,12 @@ import {
   Text,
   ScrollView,
   StyleSheet,
+  TouchableOpacity,
+  Modal,
 } from 'react-native';
 import {
   Clock,
   DollarSign,
-  Bell,
   Sparkles,
   Flame,
   AlertCircle,
@@ -16,19 +17,32 @@ import {
   TrendingUp,
   PieChart,
   BarChart3,
+  X,
+  Trash2,
+  CheckCircle2,
+  Calendar,
+  Receipt,
 } from 'lucide-react-native';
 import { useFinanceStore } from '../store/useFinanceStore';
 import { useAttendanceStore, formatMinutesToHM } from '../store/useAttendanceStore';
 import { useProductivityStore } from '../store/useProductivityStore';
 import { calculateDailyBudgetStats } from '../utils/budgetCalculator';
+import { BillItem, Transaction } from '../types';
+import { EnhancedTask } from '../types/productivity';
 
 export function UnifiedDashboard() {
-  const { profile, transactions, bills, accounts } = useFinanceStore();
+  const { profile, transactions, bills, accounts, toggleBillStatus, deleteBill, deleteTransaction } = useFinanceStore();
   const { employee, shift, todayRecord, getTodayStatus, getLiveWorkingMinutes } = useAttendanceStore();
-  const { enhancedTasks, habits, dailyPlanner, notifications } = useProductivityStore();
+  const { enhancedTasks, habits, dailyPlanner, toggleTaskComplete, deleteEnhancedTask, toggleHabitForDate } = useProductivityStore();
 
   const [timeStr, setTimeStr] = useState('');
   const [liveWorkMins, setLiveWorkMins] = useState(0);
+
+  // Detail Modals State
+  const [selectedBill, setSelectedBill] = useState<BillItem | null>(null);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+  const [selectedDayData, setSelectedDayData] = useState<{ dayLabel: string; dateStr: string; daySpent: number; txs: Transaction[] } | null>(null);
+  const [selectedTask, setSelectedTask] = useState<EnhancedTask | null>(null);
 
   useEffect(() => {
     const updateTime = () => {
@@ -78,10 +92,9 @@ export function UnifiedDashboard() {
     d.setDate(d.getDate() - (6 - idx));
     const dateStr = d.toISOString().slice(0, 10);
     const dayLabel = d.toLocaleDateString(undefined, { weekday: 'short' });
-    const daySpent = transactions
-      .filter((t) => (t.transactionDate || t.expenseDate || '') === dateStr && t.type === 'Expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-    return { dateStr, dayLabel, daySpent };
+    const dayTxs = transactions.filter((t) => (t.transactionDate || t.expenseDate || '') === dateStr && t.type === 'Expense');
+    const daySpent = dayTxs.reduce((sum, t) => sum + t.amount, 0);
+    return { dateStr, dayLabel, daySpent, txs: dayTxs };
   });
 
   const maxSpentIn7Days = Math.max(1, ...last7DaysData.map((d) => d.daySpent));
@@ -90,7 +103,6 @@ export function UnifiedDashboard() {
   const todayStatus = getTodayStatus();
 
   const todayTasksList = enhancedTasks.filter((t) => !t.completed);
-  const unreadNotifCount = notifications.filter((n) => n.status === 'unread').length;
 
   const todayHabits = habits.map((h) => ({
     ...h,
@@ -113,14 +125,6 @@ export function UnifiedDashboard() {
               {formattedDate} · <Text style={styles.clockText}>{timeStr}</Text>
             </Text>
           </View>
-          {unreadNotifCount > 0 && (
-            <View style={styles.notifBadge}>
-              <Bell size={18} color="#f59e0b" />
-              <View style={styles.notifDot}>
-                <Text style={styles.notifDotText}>{unreadNotifCount}</Text>
-              </View>
-            </View>
-          )}
         </View>
 
         {/* Total Available Liquid Balance Card (Finance Mode) */}
@@ -236,7 +240,7 @@ export function UnifiedDashboard() {
                 <BarChart3 size={20} color="#3b82f6" />
                 <Text style={styles.chartCardTitle}>7-Day Expense Trend</Text>
               </View>
-              <Text style={styles.chartCardSub}>Daily activity</Text>
+              <Text style={styles.chartCardSub}>Tap any bar to view details</Text>
             </View>
 
             <View style={styles.barChartContainer}>
@@ -244,7 +248,12 @@ export function UnifiedDashboard() {
                 const heightPercent = item.daySpent > 0 ? Math.max(15, Math.round((item.daySpent / maxSpentIn7Days) * 100)) : 6;
                 const isToday = item.dateStr === todayStr;
                 return (
-                  <View key={item.dateStr} style={styles.barColumn}>
+                  <TouchableOpacity
+                    key={item.dateStr}
+                    style={styles.barColumn}
+                    onPress={() => setSelectedDayData(item)}
+                    activeOpacity={0.7}
+                  >
                     <Text style={styles.barValText}>
                       {item.daySpent > 0 ? `₹${item.daySpent}` : ''}
                     </Text>
@@ -262,11 +271,55 @@ export function UnifiedDashboard() {
                     <Text style={[styles.barDayLabel, isToday && styles.barDayLabelToday]}>
                       {item.dayLabel}
                     </Text>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
           </View>
+        )}
+
+        {/* Recent Transactions Section (Finance Mode) */}
+        {(profile.defaultAppMode || 'finance') === 'finance' && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>💸 Recent Transactions</Text>
+              <Text style={styles.sectionBadge}>{transactions.length} total</Text>
+            </View>
+
+            {transactions.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <Sparkles size={24} color="#94a3b8" />
+                <Text style={styles.emptyText}>No transactions recorded yet.</Text>
+              </View>
+            ) : (
+              <View style={styles.txListContainer}>
+                {transactions.slice(0, 5).map((tx) => (
+                  <TouchableOpacity
+                    key={tx.id}
+                    style={styles.dashboardTxRow}
+                    onPress={() => setSelectedTx(tx)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.txIconBg}>
+                      <Receipt size={18} color={tx.type === 'Income' ? '#10b981' : '#ef4444'} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.dashboardTxTitle}>{tx.title}</Text>
+                      <Text style={styles.dashboardTxMeta}>
+                        {tx.category} · {tx.transactionDate || tx.expenseDate} · {tx.paymentMethod || 'UPI'}
+                      </Text>
+                    </View>
+                    <View style={{ alignItems: 'flex-end' }}>
+                      <Text style={[styles.dashboardTxAmount, { color: tx.type === 'Income' ? '#10b981' : '#f8fafc' }]}>
+                        {tx.type === 'Income' ? '+' : '-'}₹{tx.amount.toLocaleString()}
+                      </Text>
+                      <Text style={styles.clickDetailsText}>Tap for details ›</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </>
         )}
 
         {/* Pending Work & Tasks Quick Bar (HRMS Mode) */}
@@ -283,8 +336,13 @@ export function UnifiedDashboard() {
               </View>
             ) : (
               <View style={styles.tasksContainer}>
-                {todayTasksList.slice(0, 3).map((task) => (
-                  <View key={task.id} style={styles.taskItemRow}>
+                {todayTasksList.slice(0, 4).map((task) => (
+                  <TouchableOpacity
+                    key={task.id}
+                    style={styles.taskItemRow}
+                    onPress={() => setSelectedTask(task)}
+                    activeOpacity={0.7}
+                  >
                     <View
                       style={[
                         styles.priorityDot,
@@ -307,7 +365,7 @@ export function UnifiedDashboard() {
                     <View style={styles.taskCategoryBadge}>
                       <Text style={styles.taskCategoryText}>{task.category || 'General'}</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             )}
@@ -334,7 +392,12 @@ export function UnifiedDashboard() {
             </View>
             <View style={styles.habitsGrid}>
               {todayHabits.map((habit) => (
-                <View key={habit.id} style={styles.habitCard}>
+                <TouchableOpacity
+                  key={habit.id}
+                  style={styles.habitCard}
+                  onPress={() => toggleHabitForDate(habit.id, todayStr)}
+                  activeOpacity={0.7}
+                >
                   <View style={[styles.habitIconBg, { backgroundColor: habit.color + '20' }]}>
                     <Flame size={18} color={habit.color} />
                   </View>
@@ -357,33 +420,296 @@ export function UnifiedDashboard() {
                       {habit.isCompletedToday ? 'Done ✓' : 'Pending'}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
               ))}
             </View>
           </>
         )}
 
-        {/* Pending Bills & EMI (Finance Mode) */}
-        {(profile.defaultAppMode || 'finance') === 'finance' && pendingBills.length > 0 && (
+        {/* Bills & EMI Section (Finance Mode) */}
+        {(profile.defaultAppMode || 'finance') === 'finance' && bills.length > 0 && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>💳 Upcoming Bills & EMI</Text>
+              <Text style={styles.sectionBadge}>{pendingBills.length} pending</Text>
             </View>
             <View style={styles.billsCard}>
-              {pendingBills.slice(0, 2).map((bill) => (
-                <View key={bill.id} style={styles.billRow}>
-                  <AlertCircle size={18} color="#f59e0b" />
+              {bills.map((bill) => (
+                <TouchableOpacity
+                  key={bill.id}
+                  style={styles.billRow}
+                  onPress={() => setSelectedBill(bill)}
+                  activeOpacity={0.7}
+                >
+                  <AlertCircle size={18} color={bill.status === 'Paid' ? '#10b981' : '#f59e0b'} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.billTitle}>{bill.title}</Text>
-                    <Text style={styles.billDue}>Due: {bill.dueDate}</Text>
+                    <Text style={styles.billDue}>Due: {bill.dueDate} · {bill.category || 'Bill'}</Text>
                   </View>
-                  <Text style={styles.billAmount}>₹{bill.amount.toLocaleString()}</Text>
-                </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={[styles.billAmount, bill.status === 'Paid' && { color: '#10b981' }]}>
+                      ₹{bill.amount.toLocaleString()}
+                    </Text>
+                    <Text style={[styles.billStatusBadge, bill.status === 'Paid' && { color: '#10b981' }]}>
+                      {bill.status === 'Paid' ? 'Paid ✓' : 'Tap to Manage/Delete'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               ))}
             </View>
           </>
         )}
       </ScrollView>
+
+      {/* Bill Details & Delete Modal */}
+      {selectedBill && (
+        <Modal visible={!!selectedBill} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.detailModalContent}>
+              <View style={styles.detailModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <AlertCircle size={22} color="#f59e0b" />
+                  <Text style={styles.detailModalTitle}>Bill Details</Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedBill(null)} style={styles.closeBtn}>
+                  <X size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.detailBody}>
+                <Text style={styles.detailItemTitle}>{selectedBill.title}</Text>
+                <Text style={styles.detailAmountText}>₹{selectedBill.amount.toLocaleString()}</Text>
+
+                <View style={styles.detailRowGrid}>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Due Date</Text>
+                    <Text style={styles.detailFieldValue}>{selectedBill.dueDate}</Text>
+                  </View>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Category</Text>
+                    <Text style={styles.detailFieldValue}>{selectedBill.category || 'Bills'}</Text>
+                  </View>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Status</Text>
+                    <Text style={[styles.detailFieldValue, { color: selectedBill.status === 'Paid' ? '#10b981' : '#f59e0b' }]}>
+                      {selectedBill.status}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.actionBtnPrimary,
+                      selectedBill.status === 'Paid' ? { backgroundColor: '#f59e0b' } : { backgroundColor: '#10b981' },
+                    ]}
+                    onPress={() => {
+                      toggleBillStatus(selectedBill.id);
+                      setSelectedBill(null);
+                    }}
+                  >
+                    <CheckCircle2 size={18} color="#ffffff" />
+                    <Text style={styles.actionBtnText}>
+                      {selectedBill.status === 'Paid' ? 'Mark Pending' : 'Mark Paid'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionBtnDanger}
+                    onPress={() => {
+                      deleteBill(selectedBill.id);
+                      setSelectedBill(null);
+                    }}
+                  >
+                    <Trash2 size={18} color="#ffffff" />
+                    <Text style={styles.actionBtnText}>Delete Bill</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Transaction Details & Delete Modal */}
+      {selectedTx && (
+        <Modal visible={!!selectedTx} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.detailModalContent}>
+              <View style={styles.detailModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Receipt size={22} color="#3b82f6" />
+                  <Text style={styles.detailModalTitle}>Transaction Details</Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedTx(null)} style={styles.closeBtn}>
+                  <X size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.detailBody}>
+                <Text style={styles.detailItemTitle}>{selectedTx.title}</Text>
+                <Text style={[styles.detailAmountText, { color: selectedTx.type === 'Income' ? '#10b981' : '#ef4444' }]}>
+                  {selectedTx.type === 'Income' ? '+' : '-'}₹{selectedTx.amount.toLocaleString()}
+                </Text>
+
+                <View style={styles.detailRowGrid}>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Type</Text>
+                    <Text style={styles.detailFieldValue}>{selectedTx.type}</Text>
+                  </View>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Category</Text>
+                    <Text style={styles.detailFieldValue}>{selectedTx.category}</Text>
+                  </View>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Payment Method</Text>
+                    <Text style={styles.detailFieldValue}>{selectedTx.paymentMethod || 'UPI'}</Text>
+                  </View>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Date</Text>
+                    <Text style={styles.detailFieldValue}>{selectedTx.transactionDate || selectedTx.expenseDate}</Text>
+                  </View>
+                </View>
+
+                {selectedTx.notes && (
+                  <View style={styles.notesBox}>
+                    <Text style={styles.notesLabel}>Notes</Text>
+                    <Text style={styles.notesText}>{selectedTx.notes}</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.actionBtnDanger, { marginTop: 20 }]}
+                  onPress={() => {
+                    deleteTransaction(selectedTx.id);
+                    setSelectedTx(null);
+                  }}
+                >
+                  <Trash2 size={18} color="#ffffff" />
+                  <Text style={styles.actionBtnText}>Delete Transaction</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Day Expense Trend Details Modal */}
+      {selectedDayData && (
+        <Modal visible={!!selectedDayData} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.detailModalContent}>
+              <View style={styles.detailModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Calendar size={22} color="#3b82f6" />
+                  <Text style={styles.detailModalTitle}>{selectedDayData.dayLabel} ({selectedDayData.dateStr})</Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedDayData(null)} style={styles.closeBtn}>
+                  <X size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.detailBody}>
+                <View style={styles.daySummaryBox}>
+                  <Text style={styles.daySummaryLabel}>Total Spent On This Day</Text>
+                  <Text style={styles.daySummaryVal}>₹{selectedDayData.daySpent.toLocaleString()}</Text>
+                </View>
+
+                <Text style={styles.sectionTitleModal}>Day Expenses ({selectedDayData.txs.length})</Text>
+                {selectedDayData.txs.length === 0 ? (
+                  <Text style={styles.emptyTextModal}>No expenses recorded on this day.</Text>
+                ) : (
+                  <ScrollView style={{ maxHeight: 220 }}>
+                    {selectedDayData.txs.map((tx) => (
+                      <TouchableOpacity
+                        key={tx.id}
+                        style={styles.txRowModal}
+                        onPress={() => {
+                          setSelectedDayData(null);
+                          setSelectedTx(tx);
+                        }}
+                      >
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.txRowTitle}>{tx.title}</Text>
+                          <Text style={styles.txRowSub}>{tx.category} · {tx.paymentMethod}</Text>
+                        </View>
+                        <Text style={styles.txRowAmount}>₹{tx.amount.toLocaleString()}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
+
+      {/* Task Details Modal */}
+      {selectedTask && (
+        <Modal visible={!!selectedTask} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <View style={styles.detailModalContent}>
+              <View style={styles.detailModalHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <CheckCircle2 size={22} color="#10b981" />
+                  <Text style={styles.detailModalTitle}>Task Details</Text>
+                </View>
+                <TouchableOpacity onPress={() => setSelectedTask(null)} style={styles.closeBtn}>
+                  <X size={20} color="#94a3b8" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.detailBody}>
+                <Text style={styles.detailItemTitle}>{selectedTask.title}</Text>
+                {selectedTask.description && (
+                  <Text style={styles.detailDescText}>{selectedTask.description}</Text>
+                )}
+
+                <View style={styles.detailRowGrid}>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Priority</Text>
+                    <Text style={styles.detailFieldValue}>{selectedTask.priority}</Text>
+                  </View>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Category</Text>
+                    <Text style={styles.detailFieldValue}>{selectedTask.category || 'General'}</Text>
+                  </View>
+                  <View style={styles.detailCardField}>
+                    <Text style={styles.detailFieldLabel}>Due Date</Text>
+                    <Text style={styles.detailFieldValue}>{selectedTask.dueDate}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.modalActionsRow}>
+                  <TouchableOpacity
+                    style={styles.actionBtnPrimary}
+                    onPress={() => {
+                      toggleTaskComplete(selectedTask.id);
+                      setSelectedTask(null);
+                    }}
+                  >
+                    <CheckCircle2 size={18} color="#ffffff" />
+                    <Text style={styles.actionBtnText}>
+                      {selectedTask.completed ? 'Mark Pending' : 'Mark Done'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.actionBtnDanger}
+                    onPress={() => {
+                      deleteEnhancedTask(selectedTask.id);
+                      setSelectedTask(null);
+                    }}
+                  >
+                    <Trash2 size={18} color="#ffffff" />
+                    <Text style={styles.actionBtnText}>Delete Task</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
@@ -397,27 +723,6 @@ const styles = StyleSheet.create({
   userName: { fontSize: 26, color: '#f8fafc', fontWeight: '900', marginTop: 2 },
   dateText: { fontSize: 13, color: '#cbd5e1', marginTop: 4 },
   clockText: { color: '#10b981', fontWeight: '700' },
-
-  notifBadge: {
-    backgroundColor: '#1e293b',
-    padding: 10,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    position: 'relative',
-  },
-  notifDot: {
-    position: 'absolute',
-    top: -4,
-    right: -4,
-    backgroundColor: '#ef4444',
-    borderRadius: 8,
-    width: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notifDotText: { color: '#ffffff', fontSize: 10, fontWeight: '800' },
 
   bannerGrid: { flexDirection: 'row', gap: 12, marginBottom: 24 },
   bannerCard: {
@@ -441,8 +746,16 @@ const styles = StyleSheet.create({
   emptyCard: { backgroundColor: '#1e293b', borderRadius: 16, padding: 24, alignItems: 'center', gap: 8, marginBottom: 20, borderWidth: 1, borderColor: '#334155' },
   emptyText: { color: '#94a3b8', fontSize: 13, fontWeight: '600' },
 
+  txListContainer: { backgroundColor: '#1e293b', borderRadius: 16, padding: 12, borderWidth: 1, borderColor: '#334155', gap: 8, marginBottom: 24 },
+  dashboardTxRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 12, backgroundColor: '#0f172a' },
+  txIconBg: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#1e293b', alignItems: 'center', justifyContent: 'center' },
+  dashboardTxTitle: { color: '#f8fafc', fontSize: 14, fontWeight: '700' },
+  dashboardTxMeta: { color: '#94a3b8', fontSize: 11, marginTop: 2 },
+  dashboardTxAmount: { fontSize: 14, fontWeight: '800' },
+  clickDetailsText: { color: '#3b82f6', fontSize: 10, fontWeight: '600', marginTop: 2 },
+
   tasksContainer: { backgroundColor: '#1e293b', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#334155', gap: 12, marginBottom: 20 },
-  taskItemRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  taskItemRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
   priorityDot: { width: 8, height: 8, borderRadius: 4 },
   taskTitle: { color: '#f8fafc', fontSize: 14, fontWeight: '700' },
   taskMeta: { color: '#94a3b8', fontSize: 12 },
@@ -465,11 +778,12 @@ const styles = StyleSheet.create({
   habitStatusChip: { backgroundColor: '#0f172a', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   habitStatusText: { color: '#94a3b8', fontSize: 11, fontWeight: '700' },
 
-  billsCard: { backgroundColor: '#1e293b', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#334155', gap: 12, marginBottom: 20 },
-  billRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  billsCard: { backgroundColor: '#1e293b', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#334155', gap: 10, marginBottom: 20 },
+  billRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#334155' },
   billTitle: { color: '#f8fafc', fontSize: 14, fontWeight: '700' },
-  billDue: { color: '#94a3b8', fontSize: 12 },
+  billDue: { color: '#94a3b8', fontSize: 12, marginTop: 2 },
   billAmount: { color: '#f59e0b', fontSize: 14, fontWeight: '800' },
+  billStatusBadge: { fontSize: 10, color: '#f59e0b', fontWeight: '600', marginTop: 2 },
 
   budgetCard: {
     backgroundColor: '#1e293b',
@@ -590,7 +904,7 @@ const styles = StyleSheet.create({
   },
   chartCardSub: {
     fontSize: 11,
-    color: '#94a3b8',
+    color: '#3b82f6',
     fontWeight: '600',
   },
   barChartContainer: {
@@ -632,6 +946,188 @@ const styles = StyleSheet.create({
   },
   barDayLabelToday: {
     color: '#10b981',
+    fontWeight: '800',
+  },
+
+  /* Modals */
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  detailModalContent: {
+    width: '100%',
+    maxHeight: '85%',
+    backgroundColor: '#1e293b',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  detailModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+  detailModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#f8fafc',
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  detailBody: {
+    gap: 12,
+  },
+  detailItemTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#f8fafc',
+  },
+  detailDescText: {
+    fontSize: 13,
+    color: '#cbd5e1',
+    lineHeight: 18,
+  },
+  detailAmountText: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#f59e0b',
+  },
+  detailRowGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginTop: 6,
+  },
+  detailCardField: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: '#0f172a',
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  detailFieldLabel: {
+    fontSize: 10,
+    color: '#94a3b8',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  detailFieldValue: {
+    fontSize: 13,
+    color: '#f8fafc',
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  notesBox: {
+    backgroundColor: '#0f172a',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginTop: 4,
+  },
+  notesLabel: {
+    fontSize: 11,
+    color: '#94a3b8',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  notesText: {
+    fontSize: 13,
+    color: '#e2e8f0',
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+  actionBtnPrimary: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#10b981',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  actionBtnDanger: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#ef4444',
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  actionBtnText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  daySummaryBox: {
+    backgroundColor: '#0f172a',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+  },
+  daySummaryLabel: {
+    fontSize: 12,
+    color: '#94a3b8',
+    fontWeight: '600',
+  },
+  daySummaryVal: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#ef4444',
+    marginTop: 2,
+  },
+  sectionTitleModal: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#f8fafc',
+    marginTop: 8,
+  },
+  emptyTextModal: {
+    fontSize: 13,
+    color: '#94a3b8',
+    fontStyle: 'italic',
+    marginTop: 4,
+  },
+  txRowModal: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: '#0f172a',
+    borderRadius: 10,
+    marginBottom: 6,
+  },
+  txRowTitle: {
+    color: '#f8fafc',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  txRowSub: {
+    color: '#94a3b8',
+    fontSize: 11,
+  },
+  txRowAmount: {
+    color: '#ef4444',
+    fontSize: 13,
     fontWeight: '800',
   },
 });

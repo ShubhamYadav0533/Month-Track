@@ -1,6 +1,5 @@
 import { supabase } from '../config/supabaseClient';
 import {
-  fetchExpensesFromBackend,
   syncExpenseToBackend,
   deleteExpenseFromBackend,
   deleteMultipleExpensesFromBackend,
@@ -604,10 +603,7 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
     // 2. Fetch accounts
     let accountsData: any[] = [];
     try {
-      let accountsRes = await supabase.from('accounts').select('*').eq('user_id', targetUserId);
-      if (!accountsRes.data || accountsRes.data.length === 0) {
-        accountsRes = await supabase.from('accounts').select('*');
-      }
+      const accountsRes = await supabase.from('accounts').select('*').eq('user_id', targetUserId);
       accountsData = accountsRes.data || [];
     } catch (e) {
       console.warn('[Supabase] Accounts fetch error:', e);
@@ -616,33 +612,16 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
     // 3. Fetch transactions
     let txList: any[] = [];
     try {
-      let txRes = await supabase.from('transactions').select('*').eq('user_id', targetUserId);
-      if (!txRes.data || txRes.data.length === 0) {
-        txRes = await supabase.from('transactions').select('*');
-      }
+      const txRes = await supabase.from('transactions').select('*').eq('user_id', targetUserId);
       txList = txRes.data || [];
     } catch (e) {
       console.warn('[Supabase] Transactions fetch error:', e);
     }
 
-    if (txList.length === 0) {
-      try {
-        const backendTxs = await fetchExpensesFromBackend();
-        if (backendTxs && backendTxs.length > 0) {
-          txList = backendTxs;
-        }
-      } catch (err) {
-        console.warn('[Backend] Fallback expenses fetch failed:', err);
-      }
-    }
-
     // 4. Fetch budgets, goals, tasks, bills
     let budgetsData: any[] = [];
     try {
-      let budgetsRes = await supabase.from('budgets').select('*').eq('user_id', targetUserId);
-      if (!budgetsRes.data || budgetsRes.data.length === 0) {
-        budgetsRes = await supabase.from('budgets').select('*');
-      }
+      const budgetsRes = await supabase.from('budgets').select('*').eq('user_id', targetUserId);
       budgetsData = budgetsRes.data || [];
     } catch (e) {
       console.warn('[Supabase] Budgets fetch error:', e);
@@ -650,10 +629,7 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
 
     let goalsData: any[] = [];
     try {
-      let goalsRes = await supabase.from('savings_goals').select('*').eq('user_id', targetUserId);
-      if (!goalsRes.data || goalsRes.data.length === 0) {
-        goalsRes = await supabase.from('savings_goals').select('*');
-      }
+      const goalsRes = await supabase.from('savings_goals').select('*').eq('user_id', targetUserId);
       goalsData = goalsRes.data || [];
     } catch (e) {
       console.warn('[Supabase] Goals fetch error:', e);
@@ -661,10 +637,7 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
 
     let tasksData: any[] = [];
     try {
-      let tasksRes = await supabase.from('tasks').select('*').eq('user_id', targetUserId);
-      if (!tasksRes.data || tasksRes.data.length === 0) {
-        tasksRes = await supabase.from('tasks').select('*');
-      }
+      const tasksRes = await supabase.from('tasks').select('*').eq('user_id', targetUserId);
       tasksData = tasksRes.data || [];
     } catch (e) {
       console.warn('[Supabase] Tasks fetch error:', e);
@@ -672,10 +645,7 @@ export async function fetchFullUserDataFromSupabase(userId: string) {
 
     let billsData: any[] = [];
     try {
-      let billsRes = await supabase.from('bills').select('*').eq('user_id', targetUserId);
-      if (!billsRes.data || billsRes.data.length === 0) {
-        billsRes = await supabase.from('bills').select('*');
-      }
+      const billsRes = await supabase.from('bills').select('*').eq('user_id', targetUserId);
       billsData = billsRes.data || [];
     } catch (e) {
       console.warn('[Supabase] Bills fetch error:', e);

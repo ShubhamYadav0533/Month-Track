@@ -176,19 +176,12 @@ export const useFinanceStore = create<FinanceState>()(
               isSetupComplete: state.profile.isSetupComplete || Boolean(res.profile),
             };
 
-            // 2. Transactions merging (deduplicate by id, keep local + remote)
-            const txMap = new Map<string, Transaction>();
-            state.transactions.forEach((tx) => {
-              if (tx && tx.id) txMap.set(tx.id, tx);
-            });
-            if (Array.isArray(res.transactions)) {
-              res.transactions.forEach((tx) => {
-                if (tx && tx.id) txMap.set(tx.id, tx);
-              });
-            }
-            const mergedTxs = Array.from(txMap.values()).sort(
-              (a, b) => new Date(b.transactionDate || b.createdAt || 0).getTime() - new Date(a.transactionDate || a.createdAt || 0).getTime()
-            );
+            // 2. Transactions (use remote fetched list as source of truth)
+            const mergedTxs = Array.isArray(res.transactions)
+              ? res.transactions.sort(
+                  (a, b) => new Date(b.transactionDate || b.createdAt || 0).getTime() - new Date(a.transactionDate || a.createdAt || 0).getTime()
+                )
+              : state.transactions;
 
             // 3. Accounts merging
             let mergedAccounts = state.accounts;
@@ -211,59 +204,27 @@ export const useFinanceStore = create<FinanceState>()(
               });
             }
 
-            // 4. Budgets merging
-            const budgetMap = new Map<string, CategoryBudget>();
-            state.budgets.forEach((b) => {
-              if (b && b.category) budgetMap.set(b.category, b);
-            });
-            if (Array.isArray(res.budgets)) {
-              res.budgets.forEach((b) => {
-                if (b && b.category) budgetMap.set(b.category, b);
-              });
-            }
+            // 4. Budgets
+            const mergedBudgets = Array.isArray(res.budgets) ? res.budgets : state.budgets;
 
-            // 5. Savings Goals merging
-            const goalMap = new Map<string, SavingsGoal>();
-            state.savingsGoals.forEach((g) => {
-              if (g && g.id) goalMap.set(g.id, g);
-            });
-            if (Array.isArray(res.goals)) {
-              res.goals.forEach((g) => {
-                if (g && g.id) goalMap.set(g.id, g);
-              });
-            }
+            // 5. Savings Goals
+            const mergedGoals = Array.isArray(res.goals) ? res.goals : state.savingsGoals;
 
-            // 6. Tasks merging
-            const taskMap = new Map<string, TaskItem>();
-            state.tasks.forEach((t) => {
-              if (t && t.id) taskMap.set(t.id, t);
-            });
-            if (Array.isArray(res.tasks)) {
-              res.tasks.forEach((t) => {
-                if (t && t.id) taskMap.set(t.id, t);
-              });
-            }
+            // 6. Tasks
+            const mergedTasks = Array.isArray(res.tasks) ? res.tasks : state.tasks;
 
-            // 7. Bills merging
-            const billMap = new Map<string, BillItem>();
-            state.bills.forEach((b) => {
-              if (b && b.id) billMap.set(b.id, b);
-            });
-            if (Array.isArray(res.bills)) {
-              res.bills.forEach((b) => {
-                if (b && b.id) billMap.set(b.id, b);
-              });
-            }
+            // 7. Bills
+            const mergedBills = Array.isArray(res.bills) ? res.bills : state.bills;
 
             return {
               profile: updatedProfile,
               transactions: mergedTxs,
               expenses: mergedTxs,
               accounts: mergedAccounts,
-              budgets: Array.from(budgetMap.values()),
-              savingsGoals: Array.from(goalMap.values()),
-              tasks: Array.from(taskMap.values()),
-              bills: Array.from(billMap.values()),
+              budgets: mergedBudgets,
+              savingsGoals: mergedGoals,
+              tasks: mergedTasks,
+              bills: mergedBills,
               isLoading: false,
             };
           });
