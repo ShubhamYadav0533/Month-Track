@@ -157,56 +157,140 @@ export const useFinanceStore = create<FinanceState>()(
 
         set({ isLoading: true });
         const res = await fetchFullUserDataFromSupabase(userId);
-        if (res.success && res.profile) {
-          const fetchedTxs = res.transactions || [];
-
+        if (res && res.success) {
           set((state) => {
+            // 1. Profile merging
+            const remoteHasValidIncome = res.profile && parseFloat(res.profile.monthly_income || '0') > 0;
+            const updatedProfile: UserProfile = {
+              ...state.profile,
+              ...(res.profile
+                ? {
+                    id: res.profile.id || state.profile.id,
+                    name: res.profile.name && res.profile.name !== 'User' ? res.profile.name : state.profile.name,
+                    monthlyIncome: remoteHasValidIncome ? parseFloat(res.profile.monthly_income) : state.profile.monthlyIncome,
+                    salaryDate: res.profile.salary_date ? parseInt(String(res.profile.salary_date), 10) : state.profile.salaryDate,
+                    savingsGoal: res.profile.savings_goal ? parseFloat(String(res.profile.savings_goal)) : state.profile.savingsGoal,
+                    currency: res.profile.currency || state.profile.currency,
+                  }
+                : {}),
+              isSetupComplete: state.profile.isSetupComplete || Boolean(res.profile),
+            };
+
+            // 2. Transactions merging (deduplicate by id, keep local + remote)
+            const txMap = new Map<string, Transaction>();
+            state.transactions.forEach((tx) => {
+              if (tx && tx.id) txMap.set(tx.id, tx);
+            });
+            if (Array.isArray(res.transactions)) {
+              res.transactions.forEach((tx) => {
+                if (tx && tx.id) txMap.set(tx.id, tx);
+              });
+            }
+            const mergedTxs = Array.from(txMap.values()).sort(
+              (a, b) => new Date(b.transactionDate || b.createdAt || 0).getTime() - new Date(a.transactionDate || a.createdAt || 0).getTime()
+            );
+
+            // 3. Accounts merging
+            let mergedAccounts = state.accounts;
+            if (Array.isArray(res.accounts) && res.accounts.length > 0) {
+              const remoteAccMap = new Map<string, any>();
+              res.accounts.forEach((a: any) => {
+                if (a && a.id) remoteAccMap.set(a.id, a);
+              });
+              mergedAccounts = state.accounts.map((acc) => {
+                const remote = remoteAccMap.get(acc.id);
+                if (remote) {
+                  return {
+                    ...acc,
+                    name: remote.name || acc.name,
+                    balance: typeof remote.balance !== 'undefined' ? parseFloat(remote.balance) : acc.balance,
+                    creditLimit: typeof remote.credit_limit !== 'undefined' ? parseFloat(remote.credit_limit) : acc.creditLimit,
+                  };
+                }
+                return acc;
+              });
+            }
+
+            // 4. Budgets merging
+            const budgetMap = new Map<string, CategoryBudget>();
+            state.budgets.forEach((b) => {
+              if (b && b.category) budgetMap.set(b.category, b);
+            });
+            if (Array.isArray(res.budgets)) {
+              res.budgets.forEach((b) => {
+                if (b && b.category) budgetMap.set(b.category, b);
+              });
+            }
+
+            // 5. Savings Goals merging
+            const goalMap = new Map<string, SavingsGoal>();
+            state.savingsGoals.forEach((g) => {
+              if (g && g.id) goalMap.set(g.id, g);
+            });
+            if (Array.isArray(res.goals)) {
+              res.goals.forEach((g) => {
+                if (g && g.id) goalMap.set(g.id, g);
+              });
+            }
+
+            // 6. Tasks merging
+            const taskMap = new Map<string, TaskItem>();
+            state.tasks.forEach((t) => {
+              if (t && t.id) taskMap.set(t.id, t);
+            });
+            if (Array.isArray(res.tasks)) {
+              res.tasks.forEach((t) => {
+                if (t && t.id) taskMap.set(t.id, t);
+              });
+            }
+
+            // 7. Bills merging
+            const billMap = new Map<string, BillItem>();
+            state.bills.forEach((b) => {
+              if (b && b.id) billMap.set(b.id, b);
+            });
+            if (Array.isArray(res.bills)) {
+              res.bills.forEach((b) => {
+                if (b && b.id) billMap.set(b.id, b);
+              });
+            }
+
             return {
-              profile: {
-                id: res.profile.id,
-                name: res.profile.name || state.profile.name,
-                monthlyIncome: parseFloat(res.profile.monthly_income || '0'),
-                salaryDate: parseInt(res.profile.salary_date || '1', 10),
-                savingsGoal: parseFloat(res.profile.savings_goal || '0'),
-                currency: res.profile.currency || '₹',
-                defaultAppMode: state.profile.defaultAppMode || 'finance',
-                isSetupComplete: true,
-              },
-              transactions: fetchedTxs,
-              expenses: fetchedTxs,
-              accounts: res.accounts.length > 0
-                ? res.accounts.map((a: any) => ({
-                    id: a.id,
-                    name: a.name,
-                    type: a.type,
-                    balance: parseFloat(a.balance),
-                    creditLimit: parseFloat(a.credit_limit || 0),
-                    icon: a.type,
-                    color: a.type === 'wallet' ? '#10b981' : a.type === 'bank' ? '#3b82f6' : a.type === 'upi' ? '#8b5cf6' : '#f59e0b',
-                  }))
-                : state.accounts,
-              budgets: res.budgets || [],
-              savingsGoals: res.goals || [],
-              tasks: res.tasks || [],
-              bills: res.bills || [],
+              profile: updatedProfile,
+              transactions: mergedTxs,
+              expenses: mergedTxs,
+              accounts: mergedAccounts,
+              budgets: Array.from(budgetMap.values()),
+              savingsGoals: Array.from(goalMap.values()),
+              tasks: Array.from(taskMap.values()),
+              bills: Array.from(billMap.values()),
               isLoading: false,
             };
           });
 
-          const fetchedTasks = (res.tasks || []).map((t: any) => ({
-            id: t.id,
-            title: t.title,
-            description: t.description || '',
-            priority: t.priority || 'Medium',
-            status: (t.completed ? 'Completed' : 'Pending') as 'Completed' | 'Pending',
-            category: 'Work',
-            dueDate: t.dueDate || new Date().toISOString().slice(0, 10),
-            repeatType: 'Once' as const,
-            completed: Boolean(t.completed),
-            createdAt: t.createdAt || new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          }));
-          useProductivityStore.setState({ enhancedTasks: fetchedTasks });
+          // Sync enhancedTasks in Productivity Store
+          const currentEnhanced = useProductivityStore.getState().enhancedTasks || [];
+          const enhancedMap = new Map(currentEnhanced.map((t) => [t.id, t]));
+          if (Array.isArray(res.tasks)) {
+            res.tasks.forEach((t: any) => {
+              if (t && t.id && !enhancedMap.has(t.id)) {
+                enhancedMap.set(t.id, {
+                  id: t.id,
+                  title: t.title,
+                  description: t.description || '',
+                  priority: t.priority || 'Medium',
+                  status: t.completed ? 'Completed' : 'Pending',
+                  category: 'Work',
+                  dueDate: t.dueDate || new Date().toISOString().slice(0, 10),
+                  repeatType: 'Once' as const,
+                  completed: Boolean(t.completed),
+                  createdAt: t.createdAt || new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                });
+              }
+            });
+          }
+          useProductivityStore.setState({ enhancedTasks: Array.from(enhancedMap.values()) });
         } else {
           set({ isLoading: false });
         }

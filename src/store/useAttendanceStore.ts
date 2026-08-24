@@ -335,12 +335,21 @@ export const useAttendanceStore = create<AttendanceState>()(
       loadAttendanceFromSupabase: async () => {
         const userId = useFinanceStore.getState().profile.id;
         const res = await fetchAttendanceFromSupabase(userId);
-        if (res.success && res.data && res.data.length > 0) {
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
           const today = todayStr();
           const todayRec = res.data.find((r) => r.attendanceDate === today && !r.checkOut) || null;
           const activeBr = todayRec?.breaks?.find((b: BreakRecord) => !b.breakEnd) || null;
+
+          const historyMap = new Map<string, AttendanceRecord>();
+          get().attendanceHistory.forEach((r) => {
+            if (r && r.id) historyMap.set(r.id, r);
+          });
+          res.data.filter((r) => r.checkOut).forEach((r) => {
+            if (r && r.id) historyMap.set(r.id, r);
+          });
+
           set({
-            attendanceHistory: res.data.filter((r) => r.checkOut),
+            attendanceHistory: Array.from(historyMap.values()),
             todayRecord: todayRec || get().todayRecord,
             activeBreak: activeBr || get().activeBreak,
           });
@@ -353,8 +362,15 @@ export const useAttendanceStore = create<AttendanceState>()(
 
         // Fetch leave requests from Supabase
         const leaveRes = await fetchLeavesFromSupabase(userId);
-        if (leaveRes.success && leaveRes.data && leaveRes.data.length > 0) {
-          set({ leaveRequests: leaveRes.data });
+        if (leaveRes && leaveRes.success && Array.isArray(leaveRes.data) && leaveRes.data.length > 0) {
+          const leaveMap = new Map<string, LeaveRequest>();
+          get().leaveRequests.forEach((l) => {
+            if (l && l.id) leaveMap.set(l.id, l);
+          });
+          leaveRes.data.forEach((l) => {
+            if (l && l.id) leaveMap.set(l.id, l);
+          });
+          set({ leaveRequests: Array.from(leaveMap.values()) });
         }
       },
 

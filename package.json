@@ -60,6 +60,9 @@
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo run:android",
     "ios": "expo run:ios",
+    "apk": "export NODE_BINARY=$(which node) && cd android && ./gradlew assembleRelease",
+    "build:apk": "export NODE_BINARY=$(which node) && cd android && ./gradlew assembleRelease",
+    "build:apk:cloud": "eas build --platform android --profile preview",
     "lint": "expo lint",
     "type:gen": "npx -y supabase gen types typescript --project-id kgjixulwpzurcedwwnor > src/types/supabase.ts"
   },

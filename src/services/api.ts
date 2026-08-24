@@ -7,6 +7,20 @@ export const API_BASE_URL = __DEV__
   ? process.env.EXPO_PUBLIC_BACKEND_URL || LOCAL_BACKEND_URL
   : PROD_BACKEND_URL;
 
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 4000): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    return response;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface SyncSetupPayload {
   name: string;
   email?: string;
@@ -22,7 +36,7 @@ export interface SyncSetupPayload {
 
 export async function syncUserSetupToBackend(payload: SyncSetupPayload) {
   try {
-    const res = await fetch(`${API_BASE_URL}/user/setup`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/user/setup`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -47,7 +61,7 @@ export async function syncExpenseToBackend(expense: {
   transactionDate?: string;
 }) {
   try {
-    const res = await fetch(`${API_BASE_URL}/expenses`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/expenses`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(expense),
@@ -61,7 +75,7 @@ export async function syncExpenseToBackend(expense: {
 
 export async function fetchExpensesFromBackend() {
   try {
-    const res = await fetch(`${API_BASE_URL}/expenses`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/expenses`);
     const data = await res.json();
     if (data && data.success && Array.isArray(data.expenses)) {
       return data.expenses;
@@ -75,7 +89,7 @@ export async function fetchExpensesFromBackend() {
 
 export async function deleteExpenseFromBackend(id: string) {
   try {
-    const res = await fetch(`${API_BASE_URL}/expenses/${id}`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/expenses/${id}`, {
       method: 'DELETE',
     });
     return await res.json();
@@ -87,7 +101,7 @@ export async function deleteExpenseFromBackend(id: string) {
 
 export async function deleteMultipleExpensesFromBackend(ids: string[]) {
   try {
-    const res = await fetch(`${API_BASE_URL}/expenses/delete-batch`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/expenses/delete-batch`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids }),
@@ -98,4 +112,5 @@ export async function deleteMultipleExpensesFromBackend(ids: string[]) {
     return null;
   }
 }
+
 
