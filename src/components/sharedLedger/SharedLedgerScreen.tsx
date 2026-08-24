@@ -23,17 +23,16 @@ import {
 } from 'lucide-react-native';
 
 export type SharedLedgerTab =
-  | 'dashboard'
+  | 'overview'
   | 'people'
   | 'groups'
-  | 'expenses'
   | 'loans'
   | 'settlements'
   | 'ledger'
   | 'reports';
 
 export function SharedLedgerScreen() {
-  const [activeTab, setActiveTab] = useState<SharedLedgerTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<SharedLedgerTab>('overview');
   const [isAddExpenseModalOpen, setIsAddExpenseModalOpen] = useState(false);
   const [isRepaymentModalOpen, setIsRepaymentModalOpen] = useState(false);
 
@@ -47,10 +46,9 @@ export function SharedLedgerScreen() {
   }, [userId, loadSupabaseSharedLedger]);
 
   const tabs: { id: SharedLedgerTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'dashboard', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
+    { id: 'overview', label: 'Overview', icon: <LayoutDashboard size={16} /> },
     { id: 'people', label: 'People', icon: <Users size={16} /> },
     { id: 'groups', label: 'Groups', icon: <Folder size={16} /> },
-    { id: 'expenses', label: 'Expenses', icon: <PlusCircle size={16} /> },
     { id: 'loans', label: 'Lend & Borrow', icon: <ArrowUpRight size={16} /> },
     { id: 'settlements', label: 'Settlements', icon: <Scale size={16} /> },
     { id: 'ledger', label: 'Monthly Ledger', icon: <Calendar size={16} /> },
@@ -85,9 +83,15 @@ export function SharedLedgerScreen() {
 
       {/* Main Tab Screen Render */}
       <View style={styles.content}>
-        {activeTab === 'dashboard' && (
+        {activeTab === 'overview' && (
           <SharedLedgerDashboard
-            onNavigateTab={(t) => setActiveTab(t)}
+            onNavigateTab={(t) => {
+              if (t === 'expenses') {
+                setIsAddExpenseModalOpen(true);
+              } else {
+                setActiveTab(t as SharedLedgerTab);
+              }
+            }}
             onOpenAddExpense={() => setIsAddExpenseModalOpen(true)}
             onOpenLendBorrow={() => setActiveTab('loans')}
             onOpenRepayment={() => setIsRepaymentModalOpen(true)}
@@ -95,14 +99,6 @@ export function SharedLedgerScreen() {
         )}
         {activeTab === 'people' && <PeopleManagementScreen />}
         {activeTab === 'groups' && <GroupManagementScreen />}
-        {activeTab === 'expenses' && (
-          <SharedLedgerDashboard
-            onNavigateTab={(t) => setActiveTab(t)}
-            onOpenAddExpense={() => setIsAddExpenseModalOpen(true)}
-            onOpenLendBorrow={() => setActiveTab('loans')}
-            onOpenRepayment={() => setIsRepaymentModalOpen(true)}
-          />
-        )}
         {activeTab === 'loans' && <LendingBorrowingScreen />}
         {activeTab === 'settlements' && <SettlementEngineScreen />}
         {activeTab === 'ledger' && <MonthlyLedgerScreen />}
@@ -142,9 +138,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 20,
     backgroundColor: '#0f172a',
   },
   topTabBtnActive: {

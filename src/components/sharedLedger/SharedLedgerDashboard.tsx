@@ -35,20 +35,36 @@ export function SharedLedgerDashboard({
   } = useSharedLedgerStore();
 
   const summaries = getPersonBalanceSummaries();
-  const mySummary = summaries.find((s) => s.person.name.toLowerCase().includes('(me)')) || summaries[0];
+  const mySummary = summaries.find((s) => s.person.name.toLowerCase().includes('(me)'));
 
   const totalOwedToMe = summaries
-    .filter((s) => s.netBalance > 0 && !s.person.name.toLowerCase().includes('(me)'))
+    .filter((s) => s.netBalance > 0 && (!mySummary || s.person.id !== mySummary.person.id))
     .reduce((acc, s) => acc + s.netBalance, 0);
 
   const totalIOwe = Math.abs(
     summaries
-      .filter((s) => s.netBalance < 0 && !s.person.name.toLowerCase().includes('(me)'))
+      .filter((s) => s.netBalance < 0 && (!mySummary || s.person.id !== mySummary.person.id))
       .reduce((acc, s) => acc + s.netBalance, 0)
   );
 
+  const netBalanceValue = mySummary
+    ? mySummary.netBalance
+    : (totalOwedToMe - totalIOwe);
+
   const chartSeries = getMonthlyChartSeries(mySummary?.person.id);
   const minTransfers = getMinimizedSettlements(selectedMonth);
+
+  const getNetColor = (val: number) => {
+    if (val > 0.01) return '#10b981';
+    if (val < -0.01) return '#f43f5e';
+    return '#94a3b8';
+  };
+
+  const formatNetText = (val: number) => {
+    if (val > 0.01) return `+₹${val.toLocaleString()}`;
+    if (val < -0.01) return `-₹${Math.abs(val).toLocaleString()}`;
+    return `₹0`;
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -100,14 +116,8 @@ export function SharedLedgerDashboard({
             <Text style={styles.netLabel}>My Net Financial Position</Text>
             <Text style={styles.netSubtext}>Combined Expenses + Loans Balance</Text>
           </View>
-          <Text
-            style={[
-              styles.netValue,
-              { color: (mySummary?.netBalance || 0) >= 0 ? '#10b981' : '#f43f5e' },
-            ]}
-          >
-            {(mySummary?.netBalance || 0) >= 0 ? '+' : ''}₹
-            {(mySummary?.netBalance || 0).toLocaleString()}
+          <Text style={[styles.netValue, { color: getNetColor(netBalanceValue) }]}>
+            {formatNetText(netBalanceValue)}
           </Text>
         </View>
       </View>
@@ -179,31 +189,41 @@ export function SharedLedgerDashboard({
           </TouchableOpacity>
         </View>
 
-        {people.map((p) => {
-          const sum = summaries.find((s) => s.person.id === p.id);
-          const bal = sum?.netBalance || 0;
-          return (
-            <View key={p.id} style={styles.personSummaryRow}>
-              <View style={styles.personAvatarCircle}>
-                <Text style={styles.personAvatarText}>{p.name.charAt(0).toUpperCase()}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.personName}>{p.name}</Text>
-                <Text style={styles.personSubtext}>
-                  Paid: ₹{(sum?.totalPaid || 0).toLocaleString()} | Share: ₹{(sum?.expenseResponsibility || 0).toLocaleString()}
+        {people.length === 0 ? (
+          <View style={styles.emptyPeopleContainer}>
+            <Text style={styles.emptyCardText}>No people added to your shared ledger yet.</Text>
+            <TouchableOpacity style={styles.addPersonInlineBtn} onPress={() => onNavigateTab('people')}>
+              <Users size={14} color="#10b981" />
+              <Text style={styles.addPersonInlineText}>+ Add Person</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          people.map((p) => {
+            const sum = summaries.find((s) => s.person.id === p.id);
+            const bal = sum?.netBalance || 0;
+            return (
+              <View key={p.id} style={styles.personSummaryRow}>
+                <View style={styles.personAvatarCircle}>
+                  <Text style={styles.personAvatarText}>{p.name.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.personName}>{p.name}</Text>
+                  <Text style={styles.personSubtext}>
+                    Paid: ₹{(sum?.totalPaid || 0).toLocaleString()} | Share: ₹{(sum?.expenseResponsibility || 0).toLocaleString()}
+                  </Text>
+                </View>
+                <Text
+                  style={[
+                    styles.personBalText,
+                    { color: bal > 0 ? '#10b981' : bal < 0 ? '#f43f5e' : '#94a3b8' },
+                  ]}
+                >
+                  {bal > 0 ? '+' : ''}₹{bal.toLocaleString()}
                 </Text>
               </View>
-              <Text
-                style={[
-                  styles.personBalText,
-                  { color: bal > 0 ? '#10b981' : bal < 0 ? '#f43f5e' : '#94a3b8' },
-                ]}
-              >
-                {bal > 0 ? '+' : ''}₹{bal.toLocaleString()}
-              </Text>
-            </View>
-          );
-        })}
+            );
+          })
+        )}
       </View>
 
       <View style={{ height: 40 }} />
@@ -445,5 +465,24 @@ const styles = StyleSheet.create({
   personBalText: {
     fontSize: 14,
     fontWeight: '800',
+  },
+  emptyPeopleContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  addPersonInlineBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderRadius: 8,
+  },
+  addPersonInlineText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#10b981',
   },
 });

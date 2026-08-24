@@ -115,131 +115,15 @@ interface SharedLedgerState {
   getMonthlyChartSeries: (myPersonId?: string) => ReturnType<typeof generateMonthlyChartSeries>;
 }
 
-// Initial seed data for immediate demonstration
-const DEFAULT_SHUBHAM_ID = '00000000-0000-4000-p000-000000000001';
-const DEFAULT_RAHUL_ID   = '00000000-0000-4000-p000-000000000002';
-const DEFAULT_AMIT_ID    = '00000000-0000-4000-p000-000000000003';
-const DEFAULT_GROUP_ID   = '00000000-0000-4000-g000-000000000001';
-
-const INITIAL_PEOPLE: Person[] = [
-  { id: DEFAULT_SHUBHAM_ID, userId: '00000000-0000-4000-a000-000000000001', name: 'Shubham (Me)', phoneNumber: '+91 9876543210', email: 'shubham@example.com', status: 'active', notes: 'Primary user account', createdAt: new Date().toISOString() },
-  { id: DEFAULT_RAHUL_ID, userId: '00000000-0000-4000-a000-000000000001', name: 'Rahul', phoneNumber: '+91 9876543211', email: 'rahul@example.com', status: 'active', notes: 'Flatmate - Room 302', createdAt: new Date().toISOString() },
-  { id: DEFAULT_AMIT_ID, userId: '00000000-0000-4000-a000-000000000001', name: 'Amit', phoneNumber: '+91 9876543212', email: 'amit@example.com', status: 'active', notes: 'Flatmate - Room 302', createdAt: new Date().toISOString() },
-];
-
-const INITIAL_GROUPS: Group[] = [
-  { id: DEFAULT_GROUP_ID, userId: '00000000-0000-4000-a000-000000000001', name: 'Room 302 Flat', description: 'Monthly shared rent, bills, groceries', category: 'Room', currency: '₹', status: 'active', createdAt: new Date().toISOString() },
-];
-
-const INITIAL_MEMBERS: GroupMember[] = [
-  { id: 'gm_1', groupId: DEFAULT_GROUP_ID, personId: DEFAULT_SHUBHAM_ID, joinedAt: new Date().toISOString() },
-  { id: 'gm_2', groupId: DEFAULT_GROUP_ID, personId: DEFAULT_RAHUL_ID, joinedAt: new Date().toISOString() },
-  { id: 'gm_3', groupId: DEFAULT_GROUP_ID, personId: DEFAULT_AMIT_ID, joinedAt: new Date().toISOString() },
-];
-
-// Initial demo expenses from Section 20 scenario
-const INITIAL_EXPENSES: SharedExpense[] = [
-  {
-    id: 'exp_aug_rent',
-    groupId: DEFAULT_GROUP_ID,
-    userId: '00000000-0000-4000-a000-000000000001',
-    category: 'Rent',
-    description: 'August Room Rent',
-    totalAmount: 12000,
-    paidByPersonId: DEFAULT_SHUBHAM_ID,
-    date: '2026-08-01',
-    month: '2026-08',
-    splitType: 'equal',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    splits: [
-      { id: 'sp_1', expenseId: 'exp_aug_rent', personId: DEFAULT_SHUBHAM_ID, amount: 4000 },
-      { id: 'sp_2', expenseId: 'exp_aug_rent', personId: DEFAULT_RAHUL_ID, amount: 4000 },
-      { id: 'sp_3', expenseId: 'exp_aug_rent', personId: DEFAULT_AMIT_ID, amount: 4000 },
-    ],
-  },
-  {
-    id: 'exp_aug_elec',
-    groupId: DEFAULT_GROUP_ID,
-    userId: '00000000-0000-4000-a000-000000000001',
-    category: 'Electricity',
-    description: 'August Electricity Bill',
-    totalAmount: 3000,
-    paidByPersonId: DEFAULT_RAHUL_ID,
-    date: '2026-08-05',
-    month: '2026-08',
-    splitType: 'equal',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    splits: [
-      { id: 'sp_4', expenseId: 'exp_aug_elec', personId: DEFAULT_SHUBHAM_ID, amount: 1000 },
-      { id: 'sp_5', expenseId: 'exp_aug_elec', personId: DEFAULT_RAHUL_ID, amount: 1000 },
-      { id: 'sp_6', expenseId: 'exp_aug_elec', personId: DEFAULT_AMIT_ID, amount: 1000 },
-    ],
-  },
-  {
-    id: 'exp_aug_wifi',
-    groupId: DEFAULT_GROUP_ID,
-    userId: '00000000-0000-4000-a000-000000000001',
-    category: 'Internet',
-    description: 'WiFi Unlimited Plan',
-    totalAmount: 1500,
-    paidByPersonId: DEFAULT_AMIT_ID,
-    date: '2026-08-10',
-    month: '2026-08',
-    splitType: 'equal',
-    status: 'active',
-    createdAt: new Date().toISOString(),
-    splits: [
-      { id: 'sp_7', expenseId: 'exp_aug_wifi', personId: DEFAULT_SHUBHAM_ID, amount: 500 },
-      { id: 'sp_8', expenseId: 'exp_aug_wifi', personId: DEFAULT_RAHUL_ID, amount: 500 },
-      { id: 'sp_9', expenseId: 'exp_aug_wifi', personId: DEFAULT_AMIT_ID, amount: 500 },
-    ],
-  },
-];
-
-const INITIAL_LOANS: Loan[] = [
-  {
-    id: 'loan_rahul_1',
-    userId: '00000000-0000-4000-a000-000000000001',
-    personId: DEFAULT_RAHUL_ID,
-    type: 'LEND',
-    originalAmount: 5000,
-    remainingAmount: 3000,
-    repaidAmount: 2000,
-    date: '2026-08-15',
-    dueDate: '2026-09-01',
-    description: 'Emergency Cash Advance',
-    paymentMethod: 'UPI',
-    status: 'Partially Paid',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-const INITIAL_REPAYMENTS: Repayment[] = [
-  {
-    id: 'rep_rahul_1',
-    loanId: 'loan_rahul_1',
-    personId: DEFAULT_RAHUL_ID,
-    fromPersonId: DEFAULT_RAHUL_ID,
-    toPersonId: DEFAULT_SHUBHAM_ID,
-    amount: 2000,
-    date: '2026-08-20',
-    notes: 'GPay Partial Transfer',
-    status: 'Partially Paid',
-    createdAt: new Date().toISOString(),
-  },
-];
-
 export const useSharedLedgerStore = create<SharedLedgerState>()(
   persist(
     (set, get) => ({
-      people: INITIAL_PEOPLE,
-      groups: INITIAL_GROUPS,
-      groupMembers: INITIAL_MEMBERS,
-      sharedExpenses: INITIAL_EXPENSES,
-      loans: INITIAL_LOANS,
-      repayments: INITIAL_REPAYMENTS,
+      people: [],
+      groups: [],
+      groupMembers: [],
+      sharedExpenses: [],
+      loans: [],
+      repayments: [],
       settlements: [],
       ledgerTransactions: [],
       isLoading: false,
@@ -553,35 +437,13 @@ export const useSharedLedgerStore = create<SharedLedgerState>()(
         set({ isLoading: true });
         const res = await fetchFullSharedLedgerFromSupabase(userId);
         if (res && res.success) {
-          set((state) => {
-            const peopleMap = new Map<string, Person>();
-            state.people.forEach((p) => peopleMap.set(p.id, p));
-            (res.people || []).forEach((p) => peopleMap.set(p.id, p));
-
-            const groupMap = new Map<string, Group>();
-            state.groups.forEach((g) => groupMap.set(g.id, g));
-            (res.groups || []).forEach((g) => groupMap.set(g.id, g));
-
-            const expMap = new Map<string, SharedExpense>();
-            state.sharedExpenses.forEach((e) => expMap.set(e.id, e));
-            (res.expenses || []).forEach((e) => expMap.set(e.id, e));
-
-            const loanMap = new Map<string, Loan>();
-            state.loans.forEach((l) => loanMap.set(l.id, l));
-            (res.loans || []).forEach((l) => loanMap.set(l.id, l));
-
-            const repMap = new Map<string, Repayment>();
-            state.repayments.forEach((r) => repMap.set(r.id, r));
-            (res.repayments || []).forEach((r) => repMap.set(r.id, r));
-
-            return {
-              people: Array.from(peopleMap.values()),
-              groups: Array.from(groupMap.values()),
-              sharedExpenses: Array.from(expMap.values()),
-              loans: Array.from(loanMap.values()),
-              repayments: Array.from(repMap.values()),
-              isLoading: false,
-            };
+          set({
+            people: res.people || [],
+            groups: res.groups || [],
+            sharedExpenses: res.expenses || [],
+            loans: res.loans || [],
+            repayments: res.repayments || [],
+            isLoading: false,
           });
         } else {
           set({ isLoading: false });
@@ -604,7 +466,7 @@ export const useSharedLedgerStore = create<SharedLedgerState>()(
         return calculateMonthlyLedger(sharedExpenses, loans, repayments, month);
       },
 
-      getMonthlyChartSeries: (myPersonId = DEFAULT_SHUBHAM_ID) => {
+      getMonthlyChartSeries: (myPersonId?: string) => {
         const { sharedExpenses, loans, repayments } = get();
         return generateMonthlyChartSeries(sharedExpenses, loans, repayments, myPersonId);
       },
