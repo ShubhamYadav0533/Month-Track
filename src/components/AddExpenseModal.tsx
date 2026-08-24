@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { useFinanceStore, DEFAULT_ACC_UPI } from '../store/useFinanceStore';
 import { ExpenseCategory, PaymentMethod } from '../types';
@@ -41,7 +40,7 @@ export function AddExpenseModal({ visible, onClose }: AddExpenseModalProps) {
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [location, setLocation] = useState('');
-  const [expenseDate, setExpenseDate] = useState(getFormattedDate());
+  const [expenseDate] = useState(getFormattedDate());
 
   const handleSaveExpense = () => {
     const numericAmount = parseFloat(amount);

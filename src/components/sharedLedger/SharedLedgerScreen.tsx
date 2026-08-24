@@ -15,7 +15,6 @@ import {
   LayoutDashboard,
   Users,
   Folder,
-  PlusCircle,
   ArrowUpRight,
   Scale,
   Calendar,
