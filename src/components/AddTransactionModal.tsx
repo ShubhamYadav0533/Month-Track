@@ -18,8 +18,7 @@ import {
 } from '../store/useFinanceStore';
 import { ExpenseCategory, TransactionType, PaymentMethod } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
-import { parseReceiptImage } from '../utils/ocrParser';
-import { X, Sparkles, Check } from 'lucide-react-native';
+import { X, Check } from 'lucide-react-native';
 
 const CATEGORIES: { name: ExpenseCategory; icon: string; color: string }[] = [
   { name: 'Food', icon: '🍔', color: '#f59e0b' },
@@ -74,16 +73,15 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
   const [amount, setAmount] = useState('');
   const [type, setType] = useState<TransactionType>(defaultType);
   const [category, setCategory] = useState<ExpenseCategory>('Food');
+  const [customCategory, setCustomCategory] = useState('');
   const [subCategory, setSubCategory] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('UPI');
-  const [date, setDate] = useState(getFormattedDate());
+  const [date] = useState(getFormattedDate());
   const [time] = useState('12:00 PM');
   const [recurring] = useState(false);
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
   const [tags] = useState('');
-  const [receiptUrl, setReceiptUrl] = useState<string | undefined>();
-  const [isScanning, setIsScanning] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = () => {
@@ -95,12 +93,13 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
     try {
       const selectedAcc = PAYMENT_METHODS.find((p) => p.name === paymentMethod);
       const accountId = selectedAcc ? selectedAcc.accountId : accounts[0]?.id || 'acc_upi';
+      const finalCategory = (category === 'Others' && customCategory.trim() ? customCategory.trim() : category) as ExpenseCategory;
 
       addTransaction({
-        title: title || `${type}: ${category}`,
+        title: title || `${type}: ${finalCategory}`,
         amount: numAmount,
         type,
-        category,
+        category: finalCategory,
         subCategory,
         accountId,
         paymentMethod,
@@ -110,33 +109,17 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
         location,
         notes,
         tags: tags ? tags.split(',').map((t) => t.trim()) : [],
-        attachment: receiptUrl,
       });
 
       // Reset & Close
       setTitle('');
       setAmount('');
       setNotes('');
-      setReceiptUrl(undefined);
+      setCustomCategory('');
       onClose();
     } finally {
       setTimeout(() => setIsSaving(false), 800);
     }
-  };
-
-  const handleSimulateOCR = async () => {
-    setIsScanning(true);
-    const sampleReceipt = 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400';
-    const result = await parseReceiptImage(sampleReceipt);
-
-    if (result) {
-      setAmount(result.amount.toString());
-      setCategory(result.category);
-      if (result.storeName) setTitle(result.storeName);
-      if (result.date) setDate(result.date);
-      setReceiptUrl(sampleReceipt);
-    }
-    setIsScanning(false);
   };
 
   return (
@@ -197,27 +180,9 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
               </View>
             </View>
 
-            {/* AI Receipt Scanner */}
-            <TouchableOpacity
-              style={styles.ocrBtn}
-              onPress={handleSimulateOCR}
-              disabled={isScanning}
-            >
-              {isScanning ? (
-                <ActivityIndicator color="#10b981" />
-              ) : (
-                <>
-                  <Sparkles size={16} color="#10b981" />
-                  <Text style={styles.ocrBtnText}>
-                    {receiptUrl ? 'Bill Attached (OCR Applied)' : 'AI Scan Receipt Photo'}
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
-
             {/* Category Selector */}
             <Text style={styles.label}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catRow}>
+            <View style={styles.catGrid}>
               {CATEGORIES.map((c) => (
                 <TouchableOpacity
                   key={c.name}
@@ -233,7 +198,21 @@ export function AddTransactionModal({ isOpen, onClose, defaultType = 'Expense' }
                   </Text>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
+
+            {/* Custom Category Input if "Others" selected */}
+            {category === 'Others' && (
+              <View style={{ marginBottom: 10 }}>
+                <Text style={styles.label}>Custom Category Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Subscriptions, Gaming, Gift"
+                  placeholderTextColor="#64748b"
+                  value={customCategory}
+                  onChangeText={setCustomCategory}
+                />
+              </View>
+            )}
 
             {/* Payment Method */}
             <Text style={styles.label}>Payment Method</Text>
@@ -399,25 +378,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#10b981',
   },
-  ocrBtn: {
+  catGrid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.3)',
-    borderRadius: 12,
-    paddingVertical: 10,
-    marginTop: 10,
-  },
-  ocrBtnText: {
-    color: '#10b981',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  catRow: {
-    flexDirection: 'row',
     marginBottom: 8,
   },
   catChip: {
@@ -428,7 +392,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 16,
     backgroundColor: '#0f172a',
-    marginRight: 8,
     borderWidth: 1,
     borderColor: '#334155',
   },

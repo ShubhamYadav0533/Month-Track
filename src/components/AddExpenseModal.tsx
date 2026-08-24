@@ -7,14 +7,11 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
-  Image,
 } from 'react-native';
 import { useFinanceStore, DEFAULT_ACC_UPI } from '../store/useFinanceStore';
 import { ExpenseCategory, PaymentMethod } from '../types';
 import { getFormattedDate } from '../utils/budgetCalculator';
-import { parseReceiptImage, ParsedReceipt } from '../utils/ocrParser';
-import { X, Camera, MapPin, Sparkles, Check } from 'lucide-react-native';
+import { X, MapPin, Check } from 'lucide-react-native';
 
 const CATEGORIES: { name: ExpenseCategory; icon: string; color: string }[] = [
   { name: 'Food', icon: '🍔', color: '#f59e0b' },
@@ -39,30 +36,11 @@ export function AddExpenseModal({ visible, onClose }: AddExpenseModalProps) {
 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('Food');
+  const [customCategory, setCustomCategory] = useState('');
   const [description, setDescription] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [location, setLocation] = useState('');
-  const [expenseDate, setExpenseDate] = useState(getFormattedDate());
-  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-
-  const handleScanReceipt = async () => {
-    setIsScanning(true);
-    try {
-      const mockUri = 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=300';
-      const parsed: ParsedReceipt = await parseReceiptImage(mockUri);
-
-      setReceiptUrl(mockUri);
-      setAmount(parsed.amount.toString());
-      setCategory(parsed.category);
-      setDescription(`${parsed.storeName} (${parsed.description})`);
-      setExpenseDate(parsed.date);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsScanning(false);
-    }
-  };
+  const [expenseDate] = useState(getFormattedDate());
 
   const handleSaveExpense = () => {
     const numericAmount = parseFloat(amount);
@@ -72,17 +50,18 @@ export function AddExpenseModal({ visible, onClose }: AddExpenseModalProps) {
       (a) => a.name.toLowerCase().includes(paymentMethod.toLowerCase()) || a.type === paymentMethod.toLowerCase()
     );
 
+    const finalCategory = (category === 'Others' && customCategory.trim() ? customCategory.trim() : category) as ExpenseCategory;
+
     addExpense({
-      title: description || category,
+      title: description || finalCategory,
       type: 'Expense',
       transactionDate: expenseDate,
       accountId: matchedAccount ? matchedAccount.id : accounts[0]?.id || DEFAULT_ACC_UPI,
       amount: numericAmount,
-      category,
-      description: description || category,
+      category: finalCategory,
+      description: description || finalCategory,
       paymentMethod: paymentMethod as PaymentMethod,
       location: location || undefined,
-      receiptUrl: receiptUrl || undefined,
       expenseDate,
     });
 
@@ -90,7 +69,7 @@ export function AddExpenseModal({ visible, onClose }: AddExpenseModalProps) {
     setAmount('');
     setDescription('');
     setLocation('');
-    setReceiptUrl(null);
+    setCustomCategory('');
     onClose();
   };
 
@@ -107,30 +86,6 @@ export function AddExpenseModal({ visible, onClose }: AddExpenseModalProps) {
           </View>
 
           <ScrollView contentContainerStyle={styles.body}>
-            {/* OCR Receipt Scanner Button */}
-            <TouchableOpacity
-              style={styles.scanButton}
-              onPress={handleScanReceipt}
-              disabled={isScanning}
-            >
-              {isScanning ? (
-                <ActivityIndicator color="#10b981" />
-              ) : (
-                <>
-                  <Camera size={20} color="#10b981" />
-                  <Text style={styles.scanButtonText}>Scan Receipt with OCR AI Auto-Fill</Text>
-                  <Sparkles size={16} color="#10b981" />
-                </>
-              )}
-            </TouchableOpacity>
-
-            {receiptUrl && (
-              <View style={styles.receiptPreview}>
-                <Image source={{ uri: receiptUrl }} style={styles.receiptImage} />
-                <Text style={styles.receiptText}>Receipt scanned & details auto-detected!</Text>
-              </View>
-            )}
-
             {/* Amount Input */}
             <View style={styles.amountCard}>
               <Text style={styles.amountLabel}>Amount Spent</Text>
@@ -172,6 +127,19 @@ export function AddExpenseModal({ visible, onClose }: AddExpenseModalProps) {
                 </TouchableOpacity>
               ))}
             </View>
+
+            {category === 'Others' && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Custom Category Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Subscriptions, Gaming, Gift"
+                  placeholderTextColor="#64748b"
+                  value={customCategory}
+                  onChangeText={setCustomCategory}
+                />
+              </View>
+            )}
 
             {/* Description & Location */}
             <View style={styles.inputGroup}>

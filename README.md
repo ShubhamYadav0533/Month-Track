@@ -25,6 +25,28 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
+## Generate Android APK
+
+### 1. Build Local APK
+To generate a release APK locally on your machine using Gradle:
+
+```bash
+npm run build:apk
+# or
+npm run apk
+```
+
+Once the build completes, the generated release APK file will be located at:
+`android/app/build/outputs/apk/release/app-release.apk`
+
+### 2. Build Cloud APK (EAS Build)
+To generate an Android APK in the cloud using EAS:
+
+```bash
+npm run build:apk:cloud
+```
+
+
 ## Get a fresh project
 
 When you're ready, run:
